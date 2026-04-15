@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet, Button } from 'react-native';
+import { Platform, StyleSheet, Button, TextInput, Alert } from 'react-native';
 import { useState } from 'react';
 
 import { HelloWave } from '@/components/hello-wave';
@@ -11,10 +11,22 @@ import { Link } from 'expo-router';
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 
-import { createExam, addAttachment, listExams, type Exam } from '../../db';
+import {
+  createExam,
+  addAttachment,
+  listExams,
+  addMeasurement,
+  listLatestMeasurements,
+  type Exam,
+  type Measurement,
+} from '../../db';
 
 export default function HomeScreen() {
   const [exams, setExams] = useState<Exam[]>([]);
+  const [latestValues, setLatestValues] = useState<Measurement[]>([]);
+  const [metricName, setMetricName] = useState('');
+  const [metricResult, setMetricResult] = useState('');
+  const [metricUnit, setMetricUnit] = useState('');
 
   const onCreateExam = async () => {
     await createExam({
@@ -27,6 +39,47 @@ export default function HomeScreen() {
 
   const onLoadExams = async () => {
     setExams(await listExams());
+  };
+
+  const onSaveMetric = async () => {
+    const parsedValue = Number(metricResult);
+
+    if (!metricName.trim()) {
+      Alert.alert('Falta el nombre', 'Escribe el nombre del valor (ej: glucosa).');
+      return;
+    }
+
+    if (Number.isNaN(parsedValue)) {
+      Alert.alert('Resultado inválido', 'Escribe un número válido para el resultado.');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const exam = await createExam({
+      date: now,
+      type: 'blood',
+      notes: `Carga manual: ${metricName.trim()}`,
+    });
+
+    await addMeasurement({
+      examId: exam.id,
+      metricCode: metricName,
+      value: parsedValue,
+      unit: metricUnit,
+      capturedAt: now,
+    });
+
+    setMetricName('');
+    setMetricResult('');
+    setMetricUnit('');
+
+    setLatestValues(await listLatestMeasurements());
+    setExams(await listExams());
+    Alert.alert('Guardado', 'El valor se guardó correctamente.');
+  };
+
+  const onLoadDashboard = async () => {
+    setLatestValues(await listLatestMeasurements());
   };
   const onPickFile = async () => {
     try {
@@ -106,15 +159,52 @@ export default function HomeScreen() {
 
       {/* ✅ DB TEST */}
       <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">DB Test (SQLite)</ThemedText>
+        <ThemedText type="subtitle">Dashboard de sangre (SQLite)</ThemedText>
+
+        <ThemedText>Agregar valor manual</ThemedText>
+        <TextInput
+          value={metricName}
+          onChangeText={setMetricName}
+          placeholder="Nombre (ej: glucosa)"
+          style={styles.input}
+        />
+        <TextInput
+          value={metricResult}
+          onChangeText={setMetricResult}
+          placeholder="Resultado (ej: 96)"
+          keyboardType="numeric"
+          style={styles.input}
+        />
+        <TextInput
+          value={metricUnit}
+          onChangeText={setMetricUnit}
+          placeholder="Unidad opcional (ej: mg/dL)"
+          style={styles.input}
+        />
+        <Button title="Guardar valor manual" onPress={onSaveMetric} />
 
         <ThemedView style={{ gap: 8 }}>
           <Button title="Crear examen" onPress={onCreateExam} />
           <Button title="Cargar exámenes" onPress={onLoadExams} />
+          <Button title="Cargar últimos valores" onPress={onLoadDashboard} />
         </ThemedView>
 
         <Button title="Subir PDF" onPress={onPickFile} />
-        
+
+        <ThemedView style={{ marginTop: 12, gap: 6 }}>
+          <ThemedText type="defaultSemiBold">Últimos valores por indicador</ThemedText>
+          {latestValues.length === 0 ? (
+            <ThemedText>Aún no hay valores registrados.</ThemedText>
+          ) : (
+            latestValues.map((m) => (
+              <ThemedText key={m.id}>
+                • {m.metric_code}: {m.value} {m.unit || '(sin unidad)'} —{' '}
+                {new Date(m.captured_at).toLocaleString()}
+              </ThemedText>
+            ))
+          )}
+        </ThemedView>
+
         <ThemedView style={{ marginTop: 12, gap: 6 }}>
           {exams.length === 0 ? (
             <ThemedText>No hay exámenes todavía.</ThemedText>
@@ -180,6 +270,14 @@ const styles = StyleSheet.create({
   stepContainer: {
     gap: 8,
     marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#9aa0a6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
   },
   reactLogo: {
     height: 178,

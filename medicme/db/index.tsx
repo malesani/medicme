@@ -11,6 +11,16 @@ export type Exam = {
     updated_at: string;
 };
 
+export type Measurement = {
+    id: string;
+    exam_id: string;
+    metric_code: string;
+    value: number;
+    unit: string;
+    captured_at: string;
+    created_at: string;
+};
+
 let _db: Db | null = null;
 
 export async function getDb(): Promise<Db> {
@@ -80,4 +90,53 @@ export async function addAttachment(input: {
     );
 
     return id;
+}
+
+export async function addMeasurement(input: {
+    examId: string;
+    metricCode: string;
+    value: number;
+    unit?: string;
+    capturedAt?: string;
+}): Promise<string> {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    const id = randomUUID();
+
+    await db.runAsync(
+        `INSERT INTO measurements
+     (id, exam_id, metric_code, value, unit, captured_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?);`,
+        [
+            id,
+            input.examId,
+            input.metricCode.trim().toLowerCase(),
+            input.value,
+            input.unit?.trim() || "",
+            input.capturedAt ?? now,
+            now,
+        ]
+    );
+
+    return id;
+}
+
+export async function listLatestMeasurements(): Promise<Measurement[]> {
+    const db = await getDb();
+    const rows = await db.getAllAsync<Measurement>(
+        `SELECT id, exam_id, metric_code, value, unit, captured_at, created_at
+     FROM measurements
+     ORDER BY captured_at DESC, created_at DESC;`
+    );
+
+    const seen = new Set<string>();
+    const latest: Measurement[] = [];
+
+    for (const row of rows) {
+        if (seen.has(row.metric_code)) continue;
+        seen.add(row.metric_code);
+        latest.push(row);
+    }
+
+    return latest;
 }
