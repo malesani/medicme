@@ -1,5 +1,6 @@
 // db/index.ts
 import { randomUUID } from "expo-crypto";
+import { Platform } from "react-native";
 import { Db, openDb, initDb } from "./schema";
 
 export type Exam = {
@@ -22,13 +23,25 @@ export type Measurement = {
 };
 
 let _db: Db | null = null;
+let _dbPromise: Promise<Db> | null = null;
 
 export async function getDb(): Promise<Db> {
     if (_db) return _db;
-    const db = await openDb();
-    await initDb(db);
-    _db = db;
-    return db;
+    if (_dbPromise) return _dbPromise;
+
+    _dbPromise = (async () => {
+        const db = await openDb();
+        await initDb(db);
+        _db = db;
+        return db;
+    })();
+
+    try {
+        return await _dbPromise;
+    } catch (error) {
+        _dbPromise = null;
+        throw error;
+    }
 }
 
 // Crea un examen básico
@@ -139,4 +152,84 @@ export async function listLatestMeasurements(): Promise<Measurement[]> {
     }
 
     return latest;
+}
+
+export async function listMeasurements(): Promise<Measurement[]> {
+    const db = await getDb();
+
+    return db.getAllAsync<Measurement>(
+        `SELECT id, exam_id, metric_code, value, unit, captured_at, created_at
+     FROM measurements
+     ORDER BY captured_at DESC, created_at DESC;`
+    );
+}
+
+export async function createExamMeasurement(input: {
+    metricCode: string;
+    value: number;
+    unit?: string;
+    capturedAt?: string;
+}): Promise<void> {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    const capturedAt = input.capturedAt ?? now;
+    const examId = randomUUID();
+    const measurementId = randomUUID();
+    const metricCode = input.metricCode.trim().toLowerCase();
+    const unit = input.unit?.trim() || "";
+
+    if (Platform.OS === "web") {
+        const sqlText = (value: string) =>
+            `'${value.replace(/\0/g, "").replace(/'/g, "''")}'`;
+
+        await db.execAsync(`
+            BEGIN IMMEDIATE;
+            INSERT INTO exams
+              (id, date, type, notes, created_at, updated_at, deleted_at)
+            VALUES (
+              ${sqlText(examId)},
+              ${sqlText(capturedAt)},
+              'blood',
+              ${sqlText(`Carga manual: ${input.metricCode.trim()}`)},
+              ${sqlText(now)},
+              ${sqlText(now)},
+              NULL
+            );
+            INSERT INTO measurements
+              (id, exam_id, metric_code, value, unit, captured_at, created_at)
+            VALUES (
+              ${sqlText(measurementId)},
+              ${sqlText(examId)},
+              ${sqlText(metricCode)},
+              ${input.value},
+              ${sqlText(unit)},
+              ${sqlText(capturedAt)},
+              ${sqlText(now)}
+            );
+            COMMIT;
+        `);
+        return;
+    }
+
+    await db.withTransactionAsync(async () => {
+        await db.runAsync(
+            `INSERT INTO exams (id, date, type, notes, created_at, updated_at, deleted_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL);`,
+            [
+                examId,
+                capturedAt,
+                "blood",
+                `Carga manual: ${input.metricCode.trim()}`,
+                now,
+                now,
+            ]
+        );
+
+        await db.runAsync(
+            `INSERT INTO measurements
+       (id, exam_id, metric_code, value, unit, captured_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?);`,
+            [measurementId, examId, metricCode, input.value, unit, capturedAt, now]
+        );
+    });
 }

@@ -1,289 +1,391 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet, Button, TextInput, Alert } from 'react-native';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-
-import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system/legacy";
-
+import { Colors, Palette } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
-  createExam,
-  addAttachment,
-  listExams,
-  addMeasurement,
-  listLatestMeasurements,
-  type Exam,
+  createExamMeasurement,
+  listMeasurements,
   type Measurement,
 } from '../../db';
 
 export default function HomeScreen() {
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [latestValues, setLatestValues] = useState<Measurement[]>([]);
+  const colorScheme = useColorScheme();
+  const tintColor = Colors[colorScheme ?? 'light'].tint;
+  const [measurements, setMeasurements] = useState<Measurement[]>([]);
+  const [showForm, setShowForm] = useState(false);
   const [metricName, setMetricName] = useState('');
   const [metricResult, setMetricResult] = useState('');
   const [metricUnit, setMetricUnit] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
-  const onCreateExam = async () => {
-    await createExam({
-      date: new Date().toISOString(),
-      type: 'blood',
-      notes: 'Primer examen',
-    });
-    setExams(await listExams());
-  };
-
-  const onLoadExams = async () => {
-    setExams(await listExams());
-  };
-
-  const onSaveMetric = async () => {
-    const parsedValue = Number(metricResult);
-
-    if (!metricName.trim()) {
-      Alert.alert('Falta el nombre', 'Escribe el nombre del valor (ej: glucosa).');
-      return;
+  const loadMeasurements = useCallback(async () => {
+    try {
+      setMeasurements(await listMeasurements());
+    } catch (error) {
+      console.error('Error loading measurements:', error);
+      setFeedback({
+        type: 'error',
+        message: 'No se pudieron cargar los valores guardados.',
+      });
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    if (Number.isNaN(parsedValue)) {
-      Alert.alert('Resultado inválido', 'Escribe un número válido para el resultado.');
-      return;
-    }
+  useFocusEffect(
+    useCallback(() => {
+      void loadMeasurements();
+    }, [loadMeasurements])
+  );
 
-    const now = new Date().toISOString();
-    const exam = await createExam({
-      date: now,
-      type: 'blood',
-      notes: `Carga manual: ${metricName.trim()}`,
-    });
-
-    await addMeasurement({
-      examId: exam.id,
-      metricCode: metricName,
-      value: parsedValue,
-      unit: metricUnit,
-      capturedAt: now,
-    });
-
+  const resetForm = () => {
     setMetricName('');
     setMetricResult('');
     setMetricUnit('');
-
-    setLatestValues(await listLatestMeasurements());
-    setExams(await listExams());
-    Alert.alert('Guardado', 'El valor se guardó correctamente.');
+    setShowForm(false);
   };
 
-  const onLoadDashboard = async () => {
-    setLatestValues(await listLatestMeasurements());
-  };
-  const onPickFile = async () => {
+  const onSaveMetric = async () => {
+    const normalizedResult = metricResult.trim().replace(',', '.');
+    const parsedValue = Number(normalizedResult);
+
+    if (!metricName.trim()) {
+      setFeedback({
+        type: 'error',
+        message: 'Escribe el nombre del valor, por ejemplo T3.',
+      });
+      return;
+    }
+
+    if (!normalizedResult || !Number.isFinite(parsedValue)) {
+      setFeedback({
+        type: 'error',
+        message: 'Escribe un resultado numérico válido.',
+      });
+      return;
+    }
+
     try {
-      // 1️⃣ Crear un examen primero (temporal)
-      const exam = await createExam({
-        date: new Date().toISOString(),
-        type: "blood",
-        notes: "Examen con archivo",
+      setSaving(true);
+      setFeedback(null);
+      await createExamMeasurement({
+        metricCode: metricName,
+        value: parsedValue,
+        unit: metricUnit,
       });
 
-      // 2️⃣ Abrir selector
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "application/pdf",
-        copyToCacheDirectory: true,
+      resetForm();
+      await loadMeasurements();
+      setFeedback({
+        type: 'success',
+        message: `${metricName.trim().toUpperCase()} se guardó correctamente.`,
       });
-
-      if (result.canceled) return;
-
-      const file = result.assets[0];
-
-      // 3️⃣ Crear carpeta interna si no existe
-      const dir = FileSystem.documentDirectory + "exams/";
-      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-
-      // 4️⃣ Definir nueva ruta
-      const newPath = dir + file.name;
-
-      // 5️⃣ Copiar archivo al storage interno
-      await FileSystem.copyAsync({
-        from: file.uri,
-        to: newPath,
+    } catch (error) {
+      console.error('Error saving measurement:', error);
+      const message =
+        error instanceof Error ? error.message : 'Error desconocido al guardar.';
+      setFeedback({
+        type: 'error',
+        message: `No se pudo guardar el valor: ${message}`,
       });
-
-      // 6️⃣ Guardar metadata en SQLite
-      await addAttachment({
-        examId: exam.id,
-        path: newPath,
-        mimeType: file.mimeType ?? "application/pdf",
-        size: file.size,
-      });
-
-      alert("Archivo guardado correctamente 🎉");
-    } catch (e) {
-      console.error(e);
-      alert("Error al guardar archivo");
+    } finally {
+      setSaving(false);
     }
   };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-
-      {/* ✅ DB TEST */}
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Dashboard de sangre (SQLite)</ThemedText>
-
-        <ThemedText>Agregar valor manual</ThemedText>
-        <TextInput
-          value={metricName}
-          onChangeText={setMetricName}
-          placeholder="Nombre (ej: glucosa)"
-          style={styles.input}
-        />
-        <TextInput
-          value={metricResult}
-          onChangeText={setMetricResult}
-          placeholder="Resultado (ej: 96)"
-          keyboardType="numeric"
-          style={styles.input}
-        />
-        <TextInput
-          value={metricUnit}
-          onChangeText={setMetricUnit}
-          placeholder="Unidad opcional (ej: mg/dL)"
-          style={styles.input}
-        />
-        <Button title="Guardar valor manual" onPress={onSaveMetric} />
-
-        <ThemedView style={{ gap: 8 }}>
-          <Button title="Crear examen" onPress={onCreateExam} />
-          <Button title="Cargar exámenes" onPress={onLoadExams} />
-          <Button title="Cargar últimos valores" onPress={onLoadDashboard} />
-        </ThemedView>
-
-        <Button title="Subir PDF" onPress={onPickFile} />
-
-        <ThemedView style={{ marginTop: 12, gap: 6 }}>
-          <ThemedText type="defaultSemiBold">Últimos valores por indicador</ThemedText>
-          {latestValues.length === 0 ? (
-            <ThemedText>Aún no hay valores registrados.</ThemedText>
-          ) : (
-            latestValues.map((m) => (
-              <ThemedText key={m.id}>
-                • {m.metric_code}: {m.value} {m.unit || '(sin unidad)'} —{' '}
-                {new Date(m.captured_at).toLocaleString()}
+    <ThemedView style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.header}>
+          <View style={styles.headerCopy}>
+            <ThemedText type="title">Mis valores</ThemedText>
+            <ThemedText style={styles.secondaryText}>
+              Resultados guardados de tus exámenes.
+            </ThemedText>
+          </View>
+          {!showForm && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setShowForm(true)}
+              style={({ pressed }) => [
+                styles.addButton,
+                { backgroundColor: tintColor, opacity: pressed ? 0.75 : 1 },
+              ]}>
+              <ThemedText
+                lightColor={Palette.white}
+                darkColor={Palette.white}
+                style={styles.addButtonText}>
+                + Añadir valor
               </ThemedText>
-            ))
+            </Pressable>
           )}
-        </ThemedView>
+        </View>
 
-        <ThemedView style={{ marginTop: 12, gap: 6 }}>
-          {exams.length === 0 ? (
-            <ThemedText>No hay exámenes todavía.</ThemedText>
-          ) : (
-            exams.map((e) => (
-              <ThemedText key={e.id}>
-                • {e.type} — {new Date(e.date).toLocaleString()}
-              </ThemedText>
-            ))
-          )}
-        </ThemedView>
-      </ThemedView>
+        {feedback && (
+          <View
+            accessibilityRole="alert"
+            style={[
+              styles.feedback,
+              feedback.type === 'success' ? styles.feedbackSuccess : styles.feedbackError,
+            ]}>
+            <ThemedText
+              style={[
+                styles.feedbackText,
+                feedback.type === 'success'
+                  ? styles.feedbackSuccessText
+                  : styles.feedbackErrorText,
+              ]}>
+              {feedback.message}
+            </ThemedText>
+          </View>
+        )}
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
+        {showForm && (
+          <ThemedView
+            style={styles.form}
+            lightColor={Palette.white}
+            darkColor={Palette.white}>
+            <ThemedText type="subtitle">Nuevo valor</ThemedText>
+
+            <ThemedText type="defaultSemiBold">Valor</ThemedText>
+            <TextInput
+              autoCapitalize="characters"
+              editable={!saving}
+              onChangeText={setMetricName}
+              placeholder="Ejemplo: T3"
+              placeholderTextColor={Palette.textSecondary}
+              style={styles.input}
+              value={metricName}
             />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
+            <ThemedText type="defaultSemiBold">Resultado</ThemedText>
+            <TextInput
+              editable={!saving}
+              inputMode="decimal"
+              onChangeText={setMetricResult}
+              placeholder="Ejemplo: 50"
+              placeholderTextColor={Palette.textSecondary}
+              style={styles.input}
+              value={metricResult}
+            />
 
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+            <ThemedText type="defaultSemiBold">Unidad (opcional)</ThemedText>
+            <TextInput
+              editable={!saving}
+              onChangeText={setMetricUnit}
+              placeholder="Ejemplo: ng/dL"
+              placeholderTextColor={Palette.textSecondary}
+              style={styles.input}
+              value={metricUnit}
+            />
+
+            <View style={styles.formActions}>
+              <Pressable
+                disabled={saving}
+                onPress={resetForm}
+                style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+                <ThemedText type="defaultSemiBold">Cancelar</ThemedText>
+              </Pressable>
+              <Pressable
+                disabled={saving}
+                onPress={onSaveMetric}
+                style={({ pressed }) => [
+                  styles.saveButton,
+                  { backgroundColor: tintColor },
+                  (pressed || saving) && styles.pressed,
+                ]}>
+                <ThemedText
+                  lightColor={Palette.white}
+                  darkColor={Palette.white}
+                  type="defaultSemiBold">
+                  {saving ? 'Guardando…' : 'Guardar'}
+                </ThemedText>
+              </Pressable>
+            </View>
+          </ThemedView>
+        )}
+
+        {loading ? (
+          <ActivityIndicator color={tintColor} size="large" style={styles.loader} />
+        ) : measurements.length === 0 ? (
+          <ThemedView
+            style={styles.emptyState}
+            lightColor={Palette.softBlue}
+            darkColor={Palette.softBlue}>
+            <ThemedText type="subtitle">Todavía no hay valores</ThemedText>
+            <ThemedText style={styles.secondaryText}>
+              Usa “Añadir valor” para registrar el primer resultado.
+            </ThemedText>
+          </ThemedView>
+        ) : (
+          <View style={styles.list}>
+            {measurements.map((measurement) => (
+              <ThemedView
+                key={measurement.id}
+                style={styles.card}
+                lightColor={Palette.softBlue}
+                darkColor={Palette.softBlue}>
+                <View style={styles.cardTop}>
+                  <ThemedText type="subtitle">
+                    {measurement.metric_code.toUpperCase()}
+                  </ThemedText>
+                  <ThemedText style={[styles.result, { color: tintColor }]}>
+                    {measurement.value} {measurement.unit}
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.date}>
+                  {new Date(measurement.captured_at).toLocaleString()}
+                </ThemedText>
+              </ThemedView>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  screen: {
+    flex: 1,
   },
-  stepContainer: {
+  content: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 64,
+  },
+  header: {
+    gap: 18,
+    marginBottom: 24,
+  },
+  headerCopy: {
+    gap: 6,
+  },
+  addButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+  },
+  secondaryText: {
+    color: Palette.textSecondary,
+  },
+  addButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  form: {
+    borderColor: Palette.border,
+    borderRadius: 16,
+    borderWidth: 1,
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 24,
+    padding: 18,
+  },
+  feedback: {
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  feedbackSuccess: {
+    backgroundColor: Palette.successBackground,
+    borderColor: Palette.success,
+  },
+  feedbackError: {
+    backgroundColor: Palette.errorBackground,
+    borderColor: Palette.error,
+  },
+  feedbackText: {
+    fontWeight: '600',
+  },
+  feedbackSuccessText: {
+    color: Palette.health,
+  },
+  feedbackErrorText: {
+    color: Palette.error,
   },
   input: {
+    backgroundColor: Palette.white,
+    borderColor: Palette.border,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#9aa0a6',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
+    color: Palette.text,
+    fontSize: 16,
+    marginBottom: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  formActions: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  secondaryButton: {
+    borderColor: Palette.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+  },
+  saveButton: {
+    borderRadius: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+  },
+  pressed: {
+    opacity: 0.65,
+  },
+  loader: {
+    marginTop: 60,
+  },
+  emptyState: {
+    alignItems: 'center',
+    borderColor: Palette.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 8,
+    padding: 30,
+  },
+  list: {
+    gap: 12,
+  },
+  card: {
+    borderColor: Palette.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+    padding: 16,
+  },
+  cardTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  result: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  date: {
+    color: Palette.textSecondary,
+    fontSize: 13,
   },
 });
