@@ -28,12 +28,12 @@ export const Colors = {
     tabIconSelected: Palette.primary,
   },
   dark: {
-    text: Palette.text,
-    background: Palette.background,
-    tint: Palette.primary,
-    icon: Palette.textSecondary,
-    tabIconDefault: Palette.textSecondary,
-    tabIconSelected: Palette.primary,
+    text: '#F8FAFC',
+    background: '#0F172A',
+    tint: '#60A5FA',
+    icon: '#94A3B8',
+    tabIconDefault: '#94A3B8',
+    tabIconSelected: '#60A5FA',
   },
 };
 

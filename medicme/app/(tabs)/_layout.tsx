@@ -1,49 +1,57 @@
+import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Palette } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColors } from '@/hooks/use-colors';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const colors = useColors();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        tabBarInactiveTintColor: Palette.textSecondary,
-        tabBarStyle: {
-          backgroundColor: Palette.white,
-          borderTopColor: Palette.border,
-        },
         headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
         tabBarButton: HapticTab,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: 72,
+          paddingBottom: 10,
+          paddingTop: 8,
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Inicio',
+          tabBarIcon: ({ color }) => <Feather color={color} name="home" size={22} />,
         }}
       />
       <Tabs.Screen
-        name="pdfs"
+        name="exams"
         options={{
-          title: 'PDFs',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="doc.fill" color={color} />,
+          title: 'Exámenes',
+          tabBarIcon: ({ color }) => <Feather color={color} name="clipboard" size={22} />,
         }}
       />
       <Tabs.Screen
-        name="perfil"
+        name="values"
         options={{
-          title: 'Perfil',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.crop.circle.fill" color={color} />
-          ),
+          title: 'Valores',
+          tabBarIcon: ({ color }) => <Feather color={color} name="activity" size={22} />,
         }}
       />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: 'Citas',
+          tabBarIcon: ({ color }) => <Feather color={color} name="calendar" size={22} />,
+        }}
+      />
+      <Tabs.Screen name="perfil" options={{ href: null }} />
     </Tabs>
   );
 }

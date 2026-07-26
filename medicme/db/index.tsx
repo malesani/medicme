@@ -14,12 +14,23 @@ export type Exam = {
 
 export type Measurement = {
     id: string;
-    exam_id: string;
+    exam_id: string | null;
     metric_code: string;
     value: number;
     unit: string;
     captured_at: string;
     created_at: string;
+    range_min: number | null;
+    range_max: number | null;
+};
+
+export type MetricDefinition = {
+    code: string;
+    label: string;
+    default_unit: string;
+    default_min: number | null;
+    default_max: number | null;
+    is_system: number;
 };
 
 let _db: Db | null = null;
@@ -84,6 +95,18 @@ export async function listExams(): Promise<Exam[]> {
     return rows;
 }
 
+export async function getExamById(id: string): Promise<Exam | null> {
+    const db = await getDb();
+    return (
+        (await db.getFirstAsync<Exam>(
+            `SELECT id, date, type, notes, created_at, updated_at
+             FROM exams
+             WHERE id = ? AND deleted_at IS NULL;`,
+            [id]
+        )) ?? null
+    );
+}
+
 export async function addAttachment(input: {
     examId: string;
     path: string;
@@ -111,6 +134,8 @@ export async function addMeasurement(input: {
     value: number;
     unit?: string;
     capturedAt?: string;
+    rangeMin?: number | null;
+    rangeMax?: number | null;
 }): Promise<string> {
     const db = await getDb();
     const now = new Date().toISOString();
@@ -118,8 +143,8 @@ export async function addMeasurement(input: {
 
     await db.runAsync(
         `INSERT INTO measurements
-     (id, exam_id, metric_code, value, unit, captured_at, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?);`,
+     (id, exam_id, metric_code, value, unit, captured_at, created_at, range_min, range_max)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         [
             id,
             input.examId,
@@ -128,6 +153,8 @@ export async function addMeasurement(input: {
             input.unit?.trim() || "",
             input.capturedAt ?? now,
             now,
+            input.rangeMin ?? null,
+            input.rangeMax ?? null,
         ]
     );
 
@@ -137,7 +164,8 @@ export async function addMeasurement(input: {
 export async function listLatestMeasurements(): Promise<Measurement[]> {
     const db = await getDb();
     const rows = await db.getAllAsync<Measurement>(
-        `SELECT id, exam_id, metric_code, value, unit, captured_at, created_at
+        `SELECT id, exam_id, metric_code, value, unit, captured_at, created_at,
+                range_min, range_max
      FROM measurements
      ORDER BY captured_at DESC, created_at DESC;`
     );
@@ -158,7 +186,8 @@ export async function listMeasurements(): Promise<Measurement[]> {
     const db = await getDb();
 
     return db.getAllAsync<Measurement>(
-        `SELECT id, exam_id, metric_code, value, unit, captured_at, created_at
+        `SELECT id, exam_id, metric_code, value, unit, captured_at, created_at,
+                range_min, range_max
      FROM measurements
      ORDER BY captured_at DESC, created_at DESC;`
     );
@@ -169,11 +198,12 @@ export async function createExamMeasurement(input: {
     value: number;
     unit?: string;
     capturedAt?: string;
+    rangeMin?: number | null;
+    rangeMax?: number | null;
 }): Promise<void> {
     const db = await getDb();
     const now = new Date().toISOString();
     const capturedAt = input.capturedAt ?? now;
-    const examId = randomUUID();
     const measurementId = randomUUID();
     const metricCode = input.metricCode.trim().toLowerCase();
     const unit = input.unit?.trim() || "";
@@ -183,53 +213,46 @@ export async function createExamMeasurement(input: {
             `'${value.replace(/\0/g, "").replace(/'/g, "''")}'`;
 
         await db.execAsync(`
-            BEGIN IMMEDIATE;
-            INSERT INTO exams
-              (id, date, type, notes, created_at, updated_at, deleted_at)
-            VALUES (
-              ${sqlText(examId)},
-              ${sqlText(capturedAt)},
-              'blood',
-              ${sqlText(`Carga manual: ${input.metricCode.trim()}`)},
-              ${sqlText(now)},
-              ${sqlText(now)},
-              NULL
-            );
             INSERT INTO measurements
-              (id, exam_id, metric_code, value, unit, captured_at, created_at)
+              (id, exam_id, metric_code, value, unit, captured_at, created_at, range_min, range_max)
             VALUES (
               ${sqlText(measurementId)},
-              ${sqlText(examId)},
+              NULL,
               ${sqlText(metricCode)},
               ${input.value},
               ${sqlText(unit)},
               ${sqlText(capturedAt)},
-              ${sqlText(now)}
+              ${sqlText(now)},
+              ${input.rangeMin ?? "NULL"},
+              ${input.rangeMax ?? "NULL"}
             );
-            COMMIT;
         `);
         return;
     }
 
-    await db.withTransactionAsync(async () => {
-        await db.runAsync(
-            `INSERT INTO exams (id, date, type, notes, created_at, updated_at, deleted_at)
-       VALUES (?, ?, ?, ?, ?, ?, NULL);`,
-            [
-                examId,
-                capturedAt,
-                "blood",
-                `Carga manual: ${input.metricCode.trim()}`,
-                now,
-                now,
-            ]
-        );
+    await db.runAsync(
+        `INSERT INTO measurements
+       (id, exam_id, metric_code, value, unit, captured_at, created_at, range_min, range_max)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        [
+            measurementId,
+            null,
+            metricCode,
+            input.value,
+            unit,
+            capturedAt,
+            now,
+            input.rangeMin ?? null,
+            input.rangeMax ?? null,
+        ]
+    );
+}
 
-        await db.runAsync(
-            `INSERT INTO measurements
-       (id, exam_id, metric_code, value, unit, captured_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?);`,
-            [measurementId, examId, metricCode, input.value, unit, capturedAt, now]
-        );
-    });
+export async function listMetricDefinitions(): Promise<MetricDefinition[]> {
+    const db = await getDb();
+    return db.getAllAsync<MetricDefinition>(
+        `SELECT code, label, default_unit, default_min, default_max, is_system
+         FROM metric_definitions
+         ORDER BY is_system DESC, label ASC;`
+    );
 }
