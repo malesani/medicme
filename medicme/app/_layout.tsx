@@ -1,20 +1,25 @@
 import { Stack, router, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
 import { ProfileProvider, useProfile } from '@/context/profile-context';
+import { ThemeProvider, useAppTheme } from '@/context/theme-context';
 import { useColors } from '@/hooks/use-colors';
 
 export default function RootLayout() {
   return (
-    <ProfileProvider>
-      <RootNavigator />
-    </ProfileProvider>
+    <ThemeProvider>
+      <ProfileProvider>
+        <RootNavigator />
+      </ProfileProvider>
+    </ThemeProvider>
   );
 }
 
 function RootNavigator() {
   const colors = useColors();
+  const { theme } = useAppTheme();
   const segments = useSegments();
   const { profile, ready } = useProfile();
 
@@ -35,7 +40,12 @@ function RootNavigator() {
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

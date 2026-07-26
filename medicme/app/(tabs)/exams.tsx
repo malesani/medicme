@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SearchBar } from '@/components/search-bar';
 import { useColors } from '@/hooks/use-colors';
@@ -27,6 +28,7 @@ function categoryFor(exam: Exam): Exclude<Filter, 'todos'> {
 
 export default function ExamsScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -53,8 +55,14 @@ export default function ExamsScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content} stickyHeaderIndices={[1]}>
-        <View style={styles.header}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
+        <View
+          style={[
+            styles.header,
+            { paddingTop: Platform.OS === 'web' ? 24 : insets.top + 16 },
+          ]}>
           <View>
             <Text style={[styles.title, { color: colors.text }]}>Exámenes</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
@@ -213,7 +221,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'web' ? 24 : 60,
   },
   title: { fontSize: 30, fontWeight: '800' },
   subtitle: { fontSize: 14, marginTop: 3 },
@@ -224,8 +231,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 44,
   },
-  searchArea: { gap: 12, paddingBottom: 16, paddingHorizontal: 20, paddingTop: 22 },
-  filters: { gap: 8 },
+  searchArea: { gap: 17, paddingBottom: 22, paddingHorizontal: 20, paddingTop: 24 },
+  filters: { gap: 10, paddingBottom: 2 },
   filter: {
     borderRadius: 100,
     borderWidth: 1,

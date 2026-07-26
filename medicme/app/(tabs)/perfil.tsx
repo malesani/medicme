@@ -4,6 +4,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 
 
 import { useColors } from '@/hooks/use-colors';
 import { useProfile } from '@/context/profile-context';
+import { useAppTheme } from '@/context/theme-context';
 
 const settings = [
   { icon: 'download' as const, label: 'Exportar mis datos', detail: 'PDF y copia local' },
@@ -14,6 +15,7 @@ const settings = [
 
 export default function ProfileScreen() {
   const colors = useColors();
+  const { theme, toggleTheme } = useAppTheme();
   const { profile } = useProfile();
   const initials = `${profile?.first_name.charAt(0) ?? ''}${profile?.last_name.charAt(0) ?? ''}`.toUpperCase();
 
@@ -71,6 +73,28 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <Switch trackColor={{ false: colors.border, true: colors.primary }} value />
+          </View>
+          <View style={[styles.settingDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.settingRow}>
+            <View style={[styles.settingIcon, { backgroundColor: colors.primaryLight }]}>
+              <Feather
+                color={colors.primary}
+                name={theme === 'dark' ? 'moon' : 'sun'}
+                size={18}
+              />
+            </View>
+            <View style={styles.settingCopy}>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Modo oscuro</Text>
+              <Text style={[styles.settingDetail, { color: colors.mutedForeground }]}>
+                {theme === 'dark' ? 'Activado' : 'Desactivado'}
+              </Text>
+            </View>
+            <Switch
+              onValueChange={() => void toggleTheme()}
+              thumbColor="#FFFFFF"
+              trackColor={{ false: colors.border, true: colors.primary }}
+              value={theme === 'dark'}
+            />
           </View>
         </View>
 
@@ -152,6 +176,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 10, marginTop: 26 },
   group: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   settingRow: { alignItems: 'center', flexDirection: 'row', gap: 12, padding: 14 },
+  settingDivider: { height: 1, marginLeft: 64 },
   settingIcon: {
     alignItems: 'center',
     borderRadius: 10,
