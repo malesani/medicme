@@ -1,11 +1,15 @@
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { Image, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { useColors } from '@/hooks/use-colors';
 
 export default function TabLayout() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom, 10);
 
   return (
     <Tabs
@@ -18,8 +22,8 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: 72,
-          paddingBottom: 10,
+          height: 62 + bottomPadding,
+          paddingBottom: bottomPadding,
           paddingTop: 8,
         },
       }}>
@@ -35,6 +39,32 @@ export default function TabLayout() {
         options={{
           title: 'Exámenes',
           tabBarIcon: ({ color }) => <Feather color={color} name="clipboard" size={22} />,
+        }}
+      />
+      <Tabs.Screen
+        name="analysis"
+        options={{
+          title: 'Mi análisis',
+          tabBarIcon: () => (
+            <View
+              style={{
+                alignItems: 'center',
+                backgroundColor: colors.primary,
+                borderColor: colors.card,
+                borderRadius: 30,
+                borderWidth: 4,
+                height: 58,
+                justifyContent: 'center',
+                marginBottom: 16,
+                width: 58,
+              }}>
+              <Image
+                source={require('../../assets/images/medpocket-icon.png')}
+                style={{ borderRadius: 18, height: 38, width: 38 }}
+              />
+            </View>
+          ),
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '800' },
         }}
       />
       <Tabs.Screen
