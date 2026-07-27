@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { getSetting, setSetting } from '@/db/settings';
+import { safeLogger } from '@/utils/safe-logger';
 
 export type AppTheme = 'light' | 'dark';
 
@@ -22,7 +23,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           setThemeState(storedTheme);
         }
       })
-      .catch((error) => console.error('Error loading theme:', error));
+      .catch(() => safeLogger.error('Theme loading failed', { code: 'THEME_LOAD_FAILED' }));
   }, []);
 
   const value = useMemo<ThemeContextValue>(

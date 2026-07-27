@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MiniChart } from '@/components/mini-chart';
 import { useProfile } from '@/context/profile-context';
 import { useColors } from '@/hooks/use-colors';
+import { safeLogger } from '@/utils/safe-logger';
 import { getNextEvent, type NextEvent } from '@/db/home';
 import {
   listExams,
@@ -49,8 +50,8 @@ export default function HomeScreen() {
       setNextAppointment(appointment);
       setExams(allExams.slice(0, 3));
       setMeasurements(allValues);
-    } catch (error) {
-      console.error('Error loading home:', error);
+    } catch {
+      safeLogger.error('Home loading failed', { code: 'HOME_LOAD_FAILED' });
     } finally {
       setLoading(false);
     }

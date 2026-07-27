@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { useColors } from '@/hooks/use-colors';
+import { safeLogger } from '@/utils/safe-logger';
 import {
   getExamById,
   listAttachments,
@@ -39,14 +40,14 @@ export default function ExamDetailScreen() {
         setAttachments(loadedAttachments);
         setMeasurements(loadedMeasurements);
       })
-      .catch(console.error);
+      .catch(() => safeLogger.error('Exam loading failed', { code: 'EXAM_LOAD_FAILED' }));
   }, [id]);
 
   const openAttachment = async (attachment: Attachment) => {
     try {
       await openStoredDocument(attachment.path, attachment.mime_type);
-    } catch (error) {
-      console.error('Error opening attachment:', error);
+    } catch {
+      safeLogger.error('Attachment opening failed', { code: 'ATTACHMENT_OPEN_FAILED' });
       Alert.alert('No se pudo abrir', 'No encontramos una aplicación compatible con este archivo.');
     }
   };

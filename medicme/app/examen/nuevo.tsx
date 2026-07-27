@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import { useColors } from '@/hooks/use-colors';
+import { safeLogger } from '@/utils/safe-logger';
 import { addAttachment, addMeasurement, createExam } from '@/db';
 import {
   deleteStoredDocument,
@@ -207,8 +208,8 @@ export default function NewExamScreen() {
         });
       }
       router.back();
-    } catch (error) {
-      console.error('Error saving exam:', error);
+    } catch {
+      safeLogger.error('Exam saving failed', { code: 'EXAM_SAVE_FAILED' });
       Alert.alert('Error', 'No se pudo guardar el examen.');
     } finally {
       setSaving(false);

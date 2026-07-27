@@ -8,6 +8,7 @@ import {
   type UserProfileInput,
 } from '@/db/profile';
 import { ensureDocumentStorage } from '@/services/document-storage';
+import { safeLogger } from '@/utils/safe-logger';
 
 type ProfileContextValue = {
   profile: UserProfile | null;
@@ -27,8 +28,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         ensureDocumentStorage();
         await getDb();
         setProfile(await getUserProfile());
-      } catch (error) {
-        console.error('App initialization error:', error);
+      } catch {
+        safeLogger.error('App initialization failed', { code: 'APP_INIT_FAILED' });
       } finally {
         setReady(true);
       }

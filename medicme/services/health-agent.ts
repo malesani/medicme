@@ -2,6 +2,12 @@ import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
 
 import type { Measurement } from '@/db';
+import { executePrivateAIRequest } from '@/services/privacy/execute-private-ai-request';
+import {
+  sanitizeMedicalValuesForAI,
+  type SanitizedMedicalValue,
+} from '@/services/privacy/medical-data-sanitizer';
+import { safeLogger } from '@/utils/safe-logger';
 
 export type AgentFinding = {
   metricCode: string;
@@ -39,7 +45,16 @@ function requireFirebaseConfig() {
 export async function analyzeHealthMeasurements(
   measurements: Measurement[]
 ): Promise<HealthAgentAnalysis> {
+  return executePrivateAIRequest({
+    payload: measurements,
+    sanitize: sanitizeMedicalValuesForAI,
+    execute: executeSanitizedAnalysis,
+  });
+}
+
+async function executeSanitizedAnalysis(payload: unknown): Promise<HealthAgentAnalysis> {
   requireFirebaseConfig();
+  const values = payload as SanitizedMedicalValue[];
 
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   const ai = getAI(app, { backend: new GoogleAIBackend() });
@@ -52,6 +67,7 @@ prudentes. Usa el rango entregado por el usuario; no inventes rangos. No diagnos
 no prescribas medicamentos, no recomiendes suspender tratamientos y no presentes una posible causa
 como certeza. Si un dato no puede interpretarse sin más contexto, dilo claramente. Recomienda
 atención profesional cuando un valor esté fuera de rango o existan motivos de preocupación.
+Usa exactamente el valor "indicator" recibido como "metricCode" en cada hallazgo.
 `,
     generationConfig: {
       responseMimeType: 'application/json',
@@ -90,20 +106,12 @@ atención profesional cuando un valor esté fuera de rango o existan motivos de 
     },
   });
 
-  const payload = measurements.map((measurement) => ({
-    metricCode: measurement.metric_code,
-    value: measurement.value,
-    unit: measurement.unit,
-    rangeMin: measurement.range_min,
-    rangeMax: measurement.range_max,
-    capturedAt: measurement.captured_at,
-  }));
-
+  safeLogger.info('AI request started');
   const result = await model.generateContent(
-    `Analiza estos resultados y responde usando el esquema solicitado:\n${JSON.stringify(payload)}`
+    `Analiza estos resultados y responde usando el esquema solicitado:\n${JSON.stringify(values)}`
   );
   const text = result.response.text();
-  if (!text) throw new Error('Gemini devolvió una respuesta vacía.');
-
+  if (!text) throw new Error('EMPTY_AI_RESPONSE');
+  safeLogger.info('AI request completed');
   return JSON.parse(text) as HealthAgentAnalysis;
 }

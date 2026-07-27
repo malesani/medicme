@@ -103,6 +103,13 @@ export default function ProfileScreen() {
           {settings.map((setting, index) => (
             <Pressable
               key={setting.label}
+              onPress={
+                setting.label === 'Privacidad y seguridad'
+                  ? () => router.push('/privacy')
+                  : setting.label === 'Política de privacidad'
+                    ? () => router.push('/privacy-policy')
+                    : undefined
+              }
               style={[
                 styles.settingRow,
                 index < settings.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 },

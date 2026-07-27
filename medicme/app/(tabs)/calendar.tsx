@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColors } from '@/hooks/use-colors';
+import { safeLogger } from '@/utils/safe-logger';
 import { getDb } from '@/db';
 
 type CalendarEvent = {
@@ -60,8 +61,8 @@ export default function CalendarScreen() {
            ORDER BY scheduled_at ASC;`
         )
       );
-    } catch (error) {
-      console.error('Error loading appointments:', error);
+    } catch {
+      safeLogger.error('Appointments loading failed', { code: 'APPOINTMENTS_LOAD_FAILED' });
     } finally {
       setLoading(false);
     }
@@ -141,8 +142,8 @@ export default function CalendarScreen() {
       );
       resetForm();
       await load();
-    } catch (error) {
-      console.error('Error creating appointment:', error);
+    } catch {
+      safeLogger.error('Appointment creation failed', { code: 'APPOINTMENT_CREATE_FAILED' });
       Alert.alert('Error', 'No se pudo guardar la cita.');
     } finally {
       setSaving(false);

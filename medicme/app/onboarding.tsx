@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useProfile } from '@/context/profile-context';
 import { useColors } from '@/hooks/use-colors';
+import { safeLogger } from '@/utils/safe-logger';
 
 const bloodTypes = ['A+', 'A−', 'B+', 'B−', 'AB+', 'AB−', 'O+', 'O−'];
 
@@ -144,8 +145,8 @@ export default function OnboardingScreen() {
         blood_type: bloodType,
       });
       router.replace('/');
-    } catch (error) {
-      console.error('Error saving profile:', error);
+    } catch {
+      safeLogger.error('Profile saving failed', { code: 'PROFILE_SAVE_FAILED' });
       Alert.alert('Error', 'No se pudo guardar el perfil.');
     } finally {
       setSaving(false);

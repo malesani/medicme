@@ -19,6 +19,14 @@ import {
   type AgentFinding,
   type HealthAgentAnalysis,
 } from '@/services/health-agent';
+import { AIDataPreviewModal } from '@/components/ai-data-preview-modal';
+import { AIPrivacyConsentModal } from '@/components/ai-privacy-consent-modal';
+import {
+  acceptAIConsent,
+  hasValidAIConsent,
+} from '@/services/privacy/ai-consent-service';
+import { sanitizeMedicalValuesForAI } from '@/services/privacy/medical-data-sanitizer';
+import { safeLogger } from '@/utils/safe-logger';
 
 type MeasurementStatus = 'high' | 'low' | 'normal' | 'unknown';
 
@@ -41,6 +49,8 @@ export default function AnalysisScreen() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<HealthAgentAnalysis | null>(null);
+  const [showConsent, setShowConsent] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -61,14 +71,33 @@ export default function AnalysisScreen() {
     };
   }, [measurements]);
 
-  const analyze = async () => {
+  const requestAnalysis = async () => {
+    if (!(await hasValidAIConsent())) {
+      setShowConsent(true);
+      return;
+    }
+    setShowPreview(true);
+  };
+
+  const acceptConsentAndContinue = async () => {
+    await acceptAIConsent();
+    safeLogger.info('AI consent accepted');
+    setShowConsent(false);
+    setShowPreview(true);
+  };
+
+  const confirmAndAnalyze = async () => {
+    setShowPreview(false);
     try {
       setAnalyzing(true);
       setAnalysis(null);
       setAnalysis(await analyzeHealthMeasurements(measurements));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo consultar Gemini.';
-      Alert.alert('No se pudo realizar el análisis', message);
+    } catch {
+      safeLogger.error('AI request failed', { code: 'AI_REQUEST_FAILED' });
+      Alert.alert(
+        'No se pudo realizar el análisis',
+        'No fue posible completar el análisis. Inténtalo nuevamente.'
+      );
     } finally {
       setAnalyzing(false);
     }
@@ -167,7 +196,7 @@ export default function AnalysisScreen() {
 
               <Pressable
                 disabled={analyzing}
-                onPress={analyze}
+                onPress={() => void requestAnalysis()}
                 style={[
                   styles.primaryButton,
                   { backgroundColor: colors.primary },
@@ -219,6 +248,17 @@ export default function AnalysisScreen() {
           </>
         )}
       </ScrollView>
+      <AIPrivacyConsentModal
+        onAccept={() => void acceptConsentAndContinue()}
+        onCancel={() => setShowConsent(false)}
+        visible={showConsent}
+      />
+      <AIDataPreviewModal
+        onCancel={() => setShowPreview(false)}
+        onConfirm={() => void confirmAndAnalyze()}
+        values={sanitizeMedicalValuesForAI(measurements)}
+        visible={showPreview}
+      />
     </View>
   );
 
