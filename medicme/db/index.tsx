@@ -33,8 +33,29 @@ export type MetricDefinition = {
     is_system: number;
 };
 
+export type Attachment = {
+    id: string;
+    exam_id: string;
+    path: string;
+    original_name: string | null;
+    mime_type: string;
+    sha256: string | null;
+    size: number | null;
+    created_at: string;
+};
+
 let _db: Db | null = null;
 let _dbPromise: Promise<Db> | null = null;
+
+export function normalizeMetricCode(value: string): string {
+    return value
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+}
 
 export async function getDb(): Promise<Db> {
     if (_db) return _db;
@@ -111,6 +132,7 @@ export async function addAttachment(input: {
     examId: string;
     path: string;
     mimeType: string;
+    originalName?: string;
     size?: number;
 }) {
     const db = await getDb();
@@ -120,12 +142,31 @@ export async function addAttachment(input: {
 
     await db.runAsync(
         `INSERT INTO attachments
-     (id, exam_id, path, mime_type, size, created_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, NULL);`,
-        [id, input.examId, input.path, input.mimeType, input.size ?? null, now]
+     (id, exam_id, path, original_name, mime_type, size, created_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULL);`,
+        [
+            id,
+            input.examId,
+            input.path,
+            input.originalName ?? null,
+            input.mimeType,
+            input.size ?? null,
+            now,
+        ]
     );
 
     return id;
+}
+
+export async function listAttachments(examId: string): Promise<Attachment[]> {
+    const db = await getDb();
+    return db.getAllAsync<Attachment>(
+        `SELECT id, exam_id, path, original_name, mime_type, sha256, size, created_at
+         FROM attachments
+         WHERE exam_id = ? AND deleted_at IS NULL
+         ORDER BY created_at ASC;`,
+        [examId]
+    );
 }
 
 export async function addMeasurement(input: {
@@ -148,7 +189,7 @@ export async function addMeasurement(input: {
         [
             id,
             input.examId,
-            input.metricCode.trim().toLowerCase(),
+            normalizeMetricCode(input.metricCode),
             input.value,
             input.unit?.trim() || "",
             input.capturedAt ?? now,
@@ -174,8 +215,9 @@ export async function listLatestMeasurements(): Promise<Measurement[]> {
     const latest: Measurement[] = [];
 
     for (const row of rows) {
-        if (seen.has(row.metric_code)) continue;
-        seen.add(row.metric_code);
+        const normalizedCode = normalizeMetricCode(row.metric_code);
+        if (seen.has(normalizedCode)) continue;
+        seen.add(normalizedCode);
         latest.push(row);
     }
 
@@ -193,6 +235,18 @@ export async function listMeasurements(): Promise<Measurement[]> {
     );
 }
 
+export async function listMeasurementsByExam(examId: string): Promise<Measurement[]> {
+    const db = await getDb();
+    return db.getAllAsync<Measurement>(
+        `SELECT id, exam_id, metric_code, value, unit, captured_at, created_at,
+                range_min, range_max
+         FROM measurements
+         WHERE exam_id = ?
+         ORDER BY created_at ASC;`,
+        [examId]
+    );
+}
+
 export async function createExamMeasurement(input: {
     metricCode: string;
     value: number;
@@ -205,7 +259,7 @@ export async function createExamMeasurement(input: {
     const now = new Date().toISOString();
     const capturedAt = input.capturedAt ?? now;
     const measurementId = randomUUID();
-    const metricCode = input.metricCode.trim().toLowerCase();
+    const metricCode = normalizeMetricCode(input.metricCode);
     const unit = input.unit?.trim() || "";
 
     if (Platform.OS === "web") {

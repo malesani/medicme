@@ -7,6 +7,7 @@ import {
   type UserProfile,
   type UserProfileInput,
 } from '@/db/profile';
+import { ensureDocumentStorage } from '@/services/document-storage';
 
 type ProfileContextValue = {
   profile: UserProfile | null;
@@ -23,6 +24,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
+        ensureDocumentStorage();
         await getDb();
         setProfile(await getUserProfile());
       } catch (error) {

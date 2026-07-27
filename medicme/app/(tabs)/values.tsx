@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { MiniChart } from '@/components/mini-chart';
 import { useColors } from '@/hooks/use-colors';
@@ -19,6 +19,7 @@ import {
   createExamMeasurement,
   listMeasurements,
   listMetricDefinitions,
+  normalizeMetricCode,
   type Measurement,
   type MetricDefinition,
 } from '@/db';
@@ -62,9 +63,10 @@ export default function ValuesScreen() {
   const groups = useMemo(() => {
     const byCode = new Map<string, Measurement[]>();
     for (const measurement of measurements) {
-      const rows = byCode.get(measurement.metric_code) ?? [];
+      const normalizedCode = normalizeMetricCode(measurement.metric_code);
+      const rows = byCode.get(normalizedCode) ?? [];
       rows.push(measurement);
-      byCode.set(measurement.metric_code, rows);
+      byCode.set(normalizedCode, rows);
     }
     return Array.from(byCode.entries()).map<MetricGroup>(([code, rows]) => ({
       code,
@@ -344,8 +346,20 @@ function ValueCard({ group }: { group: MetricGroup }) {
       ? colors.secondaryLight
       : colors.muted;
 
+  const openExam = () => {
+    if (!group.latest.exam_id) return;
+    router.push({ pathname: '/examen/[id]', params: { id: group.latest.exam_id } });
+  };
+
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <Pressable
+      accessibilityRole={group.latest.exam_id ? 'button' : undefined}
+      onPress={openExam}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        pressed && group.latest.exam_id && styles.pressed,
+      ]}>
       <View style={styles.cardHeader}>
         <Text numberOfLines={1} style={[styles.metricLabel, { color: colors.mutedForeground }]}>
           {group.code
@@ -379,7 +393,16 @@ function ValueCard({ group }: { group: MetricGroup }) {
           {new Date(group.latest.captured_at).toLocaleDateString()}
         </Text>
       </View>
-    </View>
+      {group.latest.exam_id ? (
+        <View style={[styles.examLink, { borderTopColor: colors.border }]}>
+          <Feather color={colors.primary} name="file-text" size={14} />
+          <Text style={[styles.examLinkText, { color: colors.primary }]}>
+            Ver examen y documentos
+          </Text>
+          <Feather color={colors.primary} name="chevron-right" size={15} />
+        </View>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -490,6 +513,16 @@ const styles = StyleSheet.create({
   statusDot: { borderRadius: 3, height: 6, width: 6 },
   statusText: { fontSize: 11, fontWeight: '700' },
   cardDate: { fontSize: 11 },
+  examLink: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 10,
+  },
+  examLinkText: { flex: 1, fontSize: 12, fontWeight: '700' },
+  pressed: { opacity: 0.7 },
   empty: { alignItems: 'center', paddingHorizontal: 32, paddingVertical: 52 },
   emptyIcon: {
     alignItems: 'center',

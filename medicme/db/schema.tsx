@@ -1,11 +1,15 @@
 // db/schema.ts
 import * as SQLite from "expo-sqlite";
+import { Platform } from "react-native";
 
 export type Db = SQLite.SQLiteDatabase;
 
 export async function openDb(): Promise<Db> {
-  // Esto crea/abre la DB en el sandbox de la app
-  return await SQLite.openDatabaseAsync("medicme.db");
+  // En web usamos SQLite/WASM en memoria: conserva la misma API y esquema,
+  // pero no escribe datos persistentes en OPFS ni en otro storage del navegador.
+  // Android e iOS mantienen la base privada dentro del sandbox de la app.
+  const databaseName = Platform.OS === "web" ? ":memory:" : "medicme.db";
+  return await SQLite.openDatabaseAsync(databaseName);
 }
 
 export async function initDb(db: Db): Promise<void> {
@@ -55,6 +59,7 @@ export async function initDb(db: Db): Promise<void> {
       id TEXT PRIMARY KEY NOT NULL,
       exam_id TEXT NOT NULL,
       path TEXT NOT NULL,
+      original_name TEXT,
       mime_type TEXT NOT NULL,
       sha256 TEXT,
       size INTEGER,
@@ -63,6 +68,9 @@ export async function initDb(db: Db): Promise<void> {
       FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
     );
   `);
+  try {
+    await db.execAsync(`ALTER TABLE attachments ADD COLUMN original_name TEXT;`);
+  } catch {}
 
   // Tabla measurements (valores)
   await db.execAsync(`

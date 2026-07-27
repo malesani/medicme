@@ -3,6 +3,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -12,16 +14,42 @@ import {
 } from 'react-native';
 
 import { useColors } from '@/hooks/use-colors';
-import { getExamById, type Exam } from '@/db';
+import {
+  getExamById,
+  listAttachments,
+  listMeasurementsByExam,
+  type Attachment,
+  type Exam,
+  type Measurement,
+} from '@/db';
+import { openStoredDocument } from '@/services/document-storage';
 
 export default function ExamDetailScreen() {
   const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [exam, setExam] = useState<Exam | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [measurements, setMeasurements] = useState<Measurement[]>([]);
 
   useEffect(() => {
-    if (id) getExamById(id).then(setExam).catch(console.error);
+    if (!id) return;
+    Promise.all([getExamById(id), listAttachments(id), listMeasurementsByExam(id)])
+      .then(([loadedExam, loadedAttachments, loadedMeasurements]) => {
+        setExam(loadedExam);
+        setAttachments(loadedAttachments);
+        setMeasurements(loadedMeasurements);
+      })
+      .catch(console.error);
   }, [id]);
+
+  const openAttachment = async (attachment: Attachment) => {
+    try {
+      await openStoredDocument(attachment.path, attachment.mime_type);
+    } catch (error) {
+      console.error('Error opening attachment:', error);
+      Alert.alert('No se pudo abrir', 'No encontramos una aplicación compatible con este archivo.');
+    }
+  };
 
   if (!exam) {
     return (
@@ -56,6 +84,93 @@ export default function ExamDetailScreen() {
           <Info icon="user" label="Especialidad" value="General" />
           <Info icon="file-text" label="Notas" value={exam.notes || 'Sin notas'} />
         </View>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Valores ({measurements.length})
+        </Text>
+        {measurements.length === 0 ? (
+          <View style={[styles.emptyFiles, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather color={colors.mutedForeground} name="activity" size={24} />
+            <Text style={[styles.emptyFilesText, { color: colors.mutedForeground }]}>
+              Este examen no tiene valores asociados.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.files}>
+            {measurements.map((measurement) => (
+              <View
+                key={measurement.id}
+                style={[
+                  styles.measurement,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}>
+                <View style={[styles.fileIcon, { backgroundColor: colors.secondaryLight }]}>
+                  <Feather color={colors.secondary} name="activity" size={21} />
+                </View>
+                <View style={styles.fileCopy}>
+                  <Text style={[styles.fileName, { color: colors.text }]}>
+                    {measurement.metric_code
+                      .replaceAll('_', ' ')
+                      .replace(/\b\w/g, (letter) => letter.toUpperCase())}
+                  </Text>
+                  <Text style={[styles.fileMeta, { color: colors.mutedForeground }]}>
+                    Rango: {measurement.range_min ?? '—'}–{measurement.range_max ?? '—'}
+                  </Text>
+                </View>
+                <Text style={[styles.measurementValue, { color: colors.text }]}>
+                  {measurement.value}{' '}
+                  <Text style={[styles.measurementUnit, { color: colors.mutedForeground }]}>
+                    {measurement.unit}
+                  </Text>
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Documentos ({attachments.length})
+        </Text>
+        {attachments.length === 0 ? (
+          <View style={[styles.emptyFiles, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather color={colors.mutedForeground} name="folder" size={24} />
+            <Text style={[styles.emptyFilesText, { color: colors.mutedForeground }]}>
+              Este examen no tiene archivos adjuntos.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.files}>
+            {attachments.map((attachment) => {
+              const isImage = attachment.mime_type.startsWith('image/');
+              return (
+                <Pressable
+                  key={attachment.id}
+                  onPress={() => openAttachment(attachment)}
+                  style={[
+                    styles.file,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}>
+                  {isImage ? (
+                    <Image source={{ uri: attachment.path }} style={styles.thumbnail} />
+                  ) : (
+                    <View style={[styles.fileIcon, { backgroundColor: colors.primaryLight }]}>
+                      <Feather color={colors.primary} name="file-text" size={22} />
+                    </View>
+                  )}
+                  <View style={styles.fileCopy}>
+                    <Text numberOfLines={1} style={[styles.fileName, { color: colors.text }]}>
+                      {attachment.original_name || 'Documento médico'}
+                    </Text>
+                    <Text style={[styles.fileMeta, { color: colors.mutedForeground }]}>
+                      {attachment.size
+                        ? `${Math.ceil(attachment.size / 1024)} KB`
+                        : attachment.mime_type}
+                    </Text>
+                  </View>
+                  <Feather color={colors.mutedForeground} name="external-link" size={17} />
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -89,6 +204,45 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '800', marginTop: 5 },
   date: { fontSize: 14, marginTop: 7 },
   card: { borderRadius: 16, borderWidth: 1, gap: 18, marginTop: 26, padding: 18 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', marginBottom: 11, marginTop: 26 },
+  emptyFiles: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 9,
+    padding: 24,
+  },
+  emptyFilesText: { fontSize: 13, textAlign: 'center' },
+  files: { gap: 9 },
+  file: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 11,
+    padding: 11,
+  },
+  fileIcon: {
+    alignItems: 'center',
+    borderRadius: 10,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
+  thumbnail: { borderRadius: 10, height: 46, width: 46 },
+  fileCopy: { flex: 1 },
+  fileName: { fontSize: 14, fontWeight: '700' },
+  fileMeta: { fontSize: 11, marginTop: 3 },
+  measurement: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 11,
+    padding: 11,
+  },
+  measurementValue: { fontSize: 18, fontWeight: '800' },
+  measurementUnit: { fontSize: 11, fontWeight: '500' },
   info: { alignItems: 'flex-start', flexDirection: 'row', gap: 12 },
   infoCopy: { flex: 1, gap: 3 },
   infoLabel: { fontSize: 12 },

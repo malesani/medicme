@@ -48,6 +48,14 @@
           }
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MedPocket necesita acceder a tus imágenes para adjuntarlas a tus exámenes.",
+          "cameraPermission": "MedPocket necesita usar la cámara para fotografiar documentos médicos.",
+          "microphonePermission": false
+        }
+      ],
       "expo-sqlite",
       "expo-font",
       "expo-web-browser"

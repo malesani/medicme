@@ -16,7 +16,13 @@ import { MiniChart } from '@/components/mini-chart';
 import { useProfile } from '@/context/profile-context';
 import { useColors } from '@/hooks/use-colors';
 import { getNextEvent, type NextEvent } from '@/db/home';
-import { listExams, listMeasurements, type Exam, type Measurement } from '@/db';
+import {
+  listExams,
+  listMeasurements,
+  normalizeMetricCode,
+  type Exam,
+  type Measurement,
+} from '@/db';
 
 type MetricPreview = {
   latest: Measurement;
@@ -55,8 +61,9 @@ export default function HomeScreen() {
   const recentValues = useMemo(() => {
     const grouped = new Map<string, Measurement[]>();
     measurements.forEach((measurement) => {
-      grouped.set(measurement.metric_code, [
-        ...(grouped.get(measurement.metric_code) ?? []),
+      const normalizedCode = normalizeMetricCode(measurement.metric_code);
+      grouped.set(normalizedCode, [
+        ...(grouped.get(normalizedCode) ?? []),
         measurement,
       ]);
     });
@@ -329,7 +336,14 @@ function ValuePreview({ preview }: { preview: MetricPreview }) {
       : colors.muted;
   return (
     <Pressable
-      onPress={() => router.push('/values')}
+      onPress={() =>
+        preview.latest.exam_id
+          ? router.push({
+              pathname: '/examen/[id]',
+              params: { id: preview.latest.exam_id },
+            })
+          : router.push('/values')
+      }
       style={[styles.valueCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.valueHeader}>
         <Text numberOfLines={1} style={[styles.valueLabel, { color: colors.mutedForeground }]}>
@@ -364,6 +378,15 @@ function ValuePreview({ preview }: { preview: MetricPreview }) {
           {new Date(preview.latest.captured_at).toLocaleDateString()}
         </Text>
       </View>
+      {preview.latest.exam_id ? (
+        <View style={[styles.valueExamLink, { borderTopColor: colors.border }]}>
+          <Feather color={colors.primary} name="file-text" size={13} />
+          <Text style={[styles.valueExamLinkText, { color: colors.primary }]}>
+            Ver examen y documentos
+          </Text>
+          <Feather color={colors.primary} name="chevron-right" size={14} />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -544,6 +567,15 @@ const styles = StyleSheet.create({
   valueStatusDot: { borderRadius: 3, height: 6, width: 6 },
   valueStatusText: { fontSize: 11, fontWeight: '700' },
   valueDate: { fontSize: 11 },
+  valueExamLink: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 5,
+    marginTop: 11,
+    paddingTop: 9,
+  },
+  valueExamLinkText: { flex: 1, fontSize: 11, fontWeight: '700' },
   examCard: {
     alignItems: 'center',
     borderRadius: 16,

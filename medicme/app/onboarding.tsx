@@ -20,6 +20,89 @@ import { useColors } from '@/hooks/use-colors';
 
 const bloodTypes = ['A+', 'A−', 'B+', 'B−', 'AB+', 'AB−', 'O+', 'O−'];
 
+function Benefit({
+  icon,
+  text,
+}: {
+  icon: keyof typeof Feather.glyphMap;
+  text: string;
+}) {
+  const colors = useColors();
+
+  return (
+    <View style={styles.benefit}>
+      <View style={[styles.benefitIcon, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Feather color={colors.primary} name={icon} size={19} />
+      </View>
+      <Text style={[styles.benefitText, { color: colors.text }]}>{text}</Text>
+    </View>
+  );
+}
+
+function Field({
+  label,
+  icon,
+  ...inputProps
+}: {
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  value: string;
+  placeholder: string;
+  onChangeText: (text: string) => void;
+  inputMode?: 'text' | 'decimal';
+}) {
+  const colors = useColors();
+
+  return (
+    <View style={styles.field}>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
+      <View style={[styles.inputWrap, { borderColor: colors.border }]}>
+        <Feather color={colors.mutedForeground} name={icon} size={17} />
+        <TextInput
+          placeholderTextColor={colors.mutedForeground}
+          style={[styles.input, { color: colors.text }]}
+          {...inputProps}
+        />
+      </View>
+    </View>
+  );
+}
+
+function Choice({
+  label,
+  active,
+  onPress,
+  small,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  small?: boolean;
+}) {
+  const colors = useColors();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.choice,
+        small && styles.choiceSmall,
+        {
+          backgroundColor: active ? colors.primaryLight : colors.background,
+          borderColor: active ? colors.primary : colors.border,
+        },
+      ]}>
+      <Text
+        style={[
+          styles.choiceText,
+          { color: active ? colors.primary : colors.mutedForeground },
+        ]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function OnboardingScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -239,82 +322,6 @@ export default function OnboardingScreen() {
     </KeyboardAvoidingView>
   );
 
-  function Benefit({
-    icon,
-    text,
-  }: {
-    icon: keyof typeof Feather.glyphMap;
-    text: string;
-  }) {
-    return (
-      <View style={styles.benefit}>
-        <View style={[styles.benefitIcon, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather color={colors.primary} name={icon} size={19} />
-        </View>
-        <Text style={[styles.benefitText, { color: colors.text }]}>{text}</Text>
-      </View>
-    );
-  }
-
-  function Field({
-    label,
-    icon,
-    ...inputProps
-  }: {
-    label: string;
-    icon: keyof typeof Feather.glyphMap;
-    value: string;
-    placeholder: string;
-    onChangeText: (text: string) => void;
-    inputMode?: 'text' | 'decimal';
-  }) {
-    return (
-      <View style={styles.field}>
-        <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
-        <View style={[styles.inputWrap, { borderColor: colors.border }]}>
-          <Feather color={colors.mutedForeground} name={icon} size={17} />
-          <TextInput
-            placeholderTextColor={colors.mutedForeground}
-            style={[styles.input, { color: colors.text }]}
-            {...inputProps}
-          />
-        </View>
-      </View>
-    );
-  }
-
-  function Choice({
-    label,
-    active,
-    onPress,
-    small,
-  }: {
-    label: string;
-    active: boolean;
-    onPress: () => void;
-    small?: boolean;
-  }) {
-    return (
-      <Pressable
-        onPress={onPress}
-        style={[
-          styles.choice,
-          small && styles.choiceSmall,
-          {
-            backgroundColor: active ? colors.primaryLight : colors.background,
-            borderColor: active ? colors.primary : colors.border,
-          },
-        ]}>
-        <Text
-          style={[
-            styles.choiceText,
-            { color: active ? colors.primary : colors.mutedForeground },
-          ]}>
-          {label}
-        </Text>
-      </Pressable>
-    );
-  }
 }
 
 const styles = StyleSheet.create({
