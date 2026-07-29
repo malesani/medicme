@@ -4,15 +4,18 @@ import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import { ProfileProvider, useProfile } from '@/context/profile-context';
+import { LanguageProvider, useLanguage } from '@/context/language-context';
 import { ThemeProvider, useAppTheme } from '@/context/theme-context';
 import { useColors } from '@/hooks/use-colors';
 
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <ProfileProvider>
-        <RootNavigator />
-      </ProfileProvider>
+      <LanguageProvider>
+        <ProfileProvider>
+          <RootNavigator />
+        </ProfileProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
@@ -22,15 +25,16 @@ function RootNavigator() {
   const { theme } = useAppTheme();
   const segments = useSegments();
   const { profile, ready } = useProfile();
+  const { ready: languageReady } = useLanguage();
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !languageReady) return;
     const isOnboarding = segments[0] === 'onboarding';
     if (!profile && !isOnboarding) router.replace('/onboarding');
     if (profile && isOnboarding) router.replace('/');
-  }, [profile, ready, segments]);
+  }, [profile, ready, languageReady, segments]);
 
-  if (!ready) {
+  if (!ready || !languageReady) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
         <Image source={require('../assets/images/medpocket-icon.png')} style={styles.logo} />

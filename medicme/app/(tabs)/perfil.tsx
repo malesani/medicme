@@ -5,18 +5,20 @@ import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 
 import { useColors } from '@/hooks/use-colors';
 import { useProfile } from '@/context/profile-context';
 import { useAppTheme } from '@/context/theme-context';
-
-const settings = [
-  { icon: 'download' as const, label: 'Exportar mis datos', detail: 'PDF y copia local' },
-  { icon: 'database' as const, label: 'Copia de seguridad', detail: 'Solo en este dispositivo' },
-  { icon: 'shield' as const, label: 'Privacidad y seguridad', detail: 'PIN y biometría' },
-  { icon: 'file-text' as const, label: 'Política de privacidad', detail: '' },
-];
+import { useLanguage } from '@/context/language-context';
+import { LanguageSelector } from '@/components/language-selector';
 
 export default function ProfileScreen() {
   const colors = useColors();
   const { theme, toggleTheme } = useAppTheme();
   const { profile } = useProfile();
+  const { t } = useLanguage();
+  const settings = [
+    { icon: 'download' as const, key: 'export', label: t('exportData'), detail: t('pdfLocalCopy') },
+    { icon: 'database' as const, key: 'backup', label: t('backup'), detail: t('thisDeviceOnly') },
+    { icon: 'shield' as const, key: 'privacy', label: t('privacySecurity'), detail: t('pinBiometrics') },
+    { icon: 'file-text' as const, key: 'policy', label: t('privacyPolicy'), detail: '' },
+  ];
   const initials = `${profile?.first_name.charAt(0) ?? ''}${profile?.last_name.charAt(0) ?? ''}`.toUpperCase();
 
   return (
@@ -24,12 +26,12 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Pressable
-            accessibilityLabel="Volver"
+            accessibilityLabel={t('back')}
             onPress={() => router.back()}
             style={[styles.back, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather color={colors.text} name="arrow-left" size={20} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Perfil</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('profile')}</Text>
           <View style={styles.back} />
         </View>
 
@@ -41,7 +43,7 @@ export default function ProfileScreen() {
             {[profile?.first_name, profile?.last_name].filter(Boolean).join(' ')}
           </Text>
           <Text style={[styles.email, { color: colors.mutedForeground }]}>
-            Tus datos médicos permanecen en el dispositivo
+            {t('profilePrivacy')}
           </Text>
         </View>
 
@@ -50,26 +52,33 @@ export default function ProfileScreen() {
             <Text style={[styles.statValue, { color: colors.primary }]}>
               {profile?.weight_kg ? `${profile.weight_kg} kg` : '—'}
             </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Peso</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('weight')}</Text>
           </View>
           <View style={[styles.stat, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: colors.secondary }]}>
               {profile?.height_cm ? `${profile.height_cm} cm` : '—'}
             </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Altura</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('height')}</Text>
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferencias</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('preferences')}</Text>
         <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.languageRow}>
+            <View style={styles.settingCopy}>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('language')}</Text>
+            </View>
+            <LanguageSelector compact style={styles.languageSelector} />
+          </View>
+          <View style={[styles.settingDivider, { backgroundColor: colors.border }]} />
           <View style={styles.settingRow}>
             <View style={[styles.settingIcon, { backgroundColor: colors.primaryLight }]}>
               <Feather color={colors.primary} name="bell" size={18} />
             </View>
             <View style={styles.settingCopy}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Notificaciones</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('notifications')}</Text>
               <Text style={[styles.settingDetail, { color: colors.mutedForeground }]}>
-                Recordatorios de citas
+                {t('appointmentReminders')}
               </Text>
             </View>
             <Switch trackColor={{ false: colors.border, true: colors.primary }} value />
@@ -84,9 +93,9 @@ export default function ProfileScreen() {
               />
             </View>
             <View style={styles.settingCopy}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Modo oscuro</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('darkMode')}</Text>
               <Text style={[styles.settingDetail, { color: colors.mutedForeground }]}>
-                {theme === 'dark' ? 'Activado' : 'Desactivado'}
+                {theme === 'dark' ? t('enabled') : t('disabled')}
               </Text>
             </View>
             <Switch
@@ -98,15 +107,15 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Datos y seguridad</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('dataSecurity')}</Text>
         <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {settings.map((setting, index) => (
             <Pressable
-              key={setting.label}
+              key={setting.key}
               onPress={
-                setting.label === 'Privacidad y seguridad'
+                setting.key === 'privacy'
                   ? () => router.push('/privacy')
-                  : setting.label === 'Política de privacidad'
+                  : setting.key === 'policy'
                     ? () => router.push('/privacy-policy')
                     : undefined
               }
@@ -130,7 +139,7 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <Text style={[styles.version, { color: colors.mutedForeground }]}>MedPocket · versión 1.0</Text>
+        <Text style={[styles.version, { color: colors.mutedForeground }]}>{t('version')}</Text>
       </ScrollView>
     </View>
   );
@@ -183,6 +192,8 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 10, marginTop: 26 },
   group: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   settingRow: { alignItems: 'center', flexDirection: 'row', gap: 12, padding: 14 },
+  languageRow: { alignItems: 'center', flexDirection: 'row', gap: 12, padding: 14 },
+  languageSelector: { width: 164 },
   settingDivider: { height: 1, marginLeft: 64 },
   settingIcon: {
     alignItems: 'center',

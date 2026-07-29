@@ -5,9 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { useColors } from '@/hooks/use-colors';
+import { useLanguage } from '@/context/language-context';
 
 export default function TabLayout() {
   const colors = useColors();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, 10);
 
@@ -30,21 +32,21 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Inicio',
+          title: t('home'),
           tabBarIcon: ({ color }) => <Feather color={color} name="home" size={22} />,
         }}
       />
       <Tabs.Screen
         name="exams"
         options={{
-          title: 'Exámenes',
+          title: t('exams'),
           tabBarIcon: ({ color }) => <Feather color={color} name="clipboard" size={22} />,
         }}
       />
       <Tabs.Screen
         name="analysis"
         options={{
-          title: 'Mi análisis',
+          title: t('analysis'),
           tabBarIcon: () => (
             <View
               style={{
@@ -70,14 +72,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="values"
         options={{
-          title: 'Valores',
+          title: t('values'),
           tabBarIcon: ({ color }) => <Feather color={color} name="activity" size={22} />,
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
-          title: 'Citas',
+          title: t('appointments'),
           tabBarIcon: ({ color }) => <Feather color={color} name="calendar" size={22} />,
         }}
       />

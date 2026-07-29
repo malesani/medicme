@@ -16,6 +16,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useProfile } from '@/context/profile-context';
+import { useLanguage } from '@/context/language-context';
+import { LanguageSelector } from '@/components/language-selector';
 import { useColors } from '@/hooks/use-colors';
 import { safeLogger } from '@/utils/safe-logger';
 
@@ -108,6 +110,7 @@ export default function OnboardingScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { saveProfile } = useProfile();
+  const { t } = useLanguage();
   const [step, setStep] = useState<1 | 2>(1);
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -120,7 +123,7 @@ export default function OnboardingScreen() {
 
   const finish = async () => {
     if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert('Faltan datos', 'Escribe tu nombre y apellido.');
+      Alert.alert(t('missingData'), t('missingName'));
       return;
     }
     const weightValue = weight.trim() ? Number(weight.replace(',', '.')) : null;
@@ -129,7 +132,7 @@ export default function OnboardingScreen() {
       (weightValue !== null && (!Number.isFinite(weightValue) || weightValue <= 0)) ||
       (heightValue !== null && (!Number.isFinite(heightValue) || heightValue <= 0))
     ) {
-      Alert.alert('Revisa los datos', 'Peso y altura deben ser números positivos.');
+      Alert.alert(t('checkData'), t('invalidBodyValues'));
       return;
     }
 
@@ -147,7 +150,7 @@ export default function OnboardingScreen() {
       router.replace('/');
     } catch {
       safeLogger.error('Profile saving failed', { code: 'PROFILE_SAVE_FAILED' });
-      Alert.alert('Error', 'No se pudo guardar el perfil.');
+      Alert.alert(t('error'), t('profileSaveError'));
     } finally {
       setSaving(false);
     }
@@ -164,6 +167,7 @@ export default function OnboardingScreen() {
             paddingTop: insets.top + 30,
           },
         ]}>
+        <LanguageSelector compact style={styles.welcomeLanguage} />
         <View style={styles.welcomeMain}>
           <View style={[styles.logoWrap, { backgroundColor: colors.primaryLight }]}>
             <Image
@@ -171,23 +175,23 @@ export default function OnboardingScreen() {
               style={styles.logo}
             />
           </View>
-          <Text style={[styles.welcomeEyebrow, { color: colors.primary }]}>BIENVENIDO A</Text>
+          <Text style={[styles.welcomeEyebrow, { color: colors.primary }]}>{t('welcomeTo')}</Text>
           <Text style={[styles.welcomeTitle, { color: colors.text }]}>MedPocket</Text>
           <Text style={[styles.welcomeText, { color: colors.mutedForeground }]}>
-            Tus exámenes, valores y citas médicas organizados en un único lugar privado.
+            {t('welcomeBody')}
           </Text>
 
           <View style={styles.benefits}>
-            <Benefit icon="shield" text="Los datos permanecen en tu dispositivo" />
-            <Benefit icon="activity" text="Sigue tus valores sin emitir diagnósticos" />
-            <Benefit icon="calendar" text="Organiza exámenes y próximas citas" />
+            <Benefit icon="shield" text={t('benefitPrivate')} />
+            <Benefit icon="activity" text={t('benefitValues')} />
+            <Benefit icon="calendar" text={t('benefitCalendar')} />
           </View>
         </View>
 
         <Pressable
           onPress={() => setStep(2)}
           style={[styles.primaryButton, { backgroundColor: colors.primary }]}>
-          <Text style={styles.primaryButtonText}>Configurar mi perfil</Text>
+          <Text style={styles.primaryButtonText}>{t('configureProfile')}</Text>
           <Feather color="#FFFFFF" name="arrow-right" size={19} />
         </Pressable>
       </View>
@@ -207,7 +211,7 @@ export default function OnboardingScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={styles.formHeader}>
           <Pressable
-            accessibilityLabel="Volver"
+            accessibilityLabel={t('back')}
             onPress={() => setStep(1)}
             style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather color={colors.text} name="arrow-left" size={20} />
@@ -218,39 +222,39 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
-        <Text style={[styles.formTitle, { color: colors.text }]}>Cuéntanos sobre ti</Text>
+        <Text style={[styles.formTitle, { color: colors.text }]}>{t('tellUs')}</Text>
         <Text style={[styles.formSubtitle, { color: colors.mutedForeground }]}>
-          Esto personaliza la aplicación. Podrás modificarlo después desde Perfil.
+          {t('profileHint')}
         </Text>
 
         <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Field
             icon="user"
-            label="Nombre"
+            label={t('firstName')}
             onChangeText={setFirstName}
-            placeholder="Tu nombre"
+            placeholder={t('firstNamePlaceholder')}
             value={firstName}
           />
           <Field
             icon="user"
-            label="Apellido"
+            label={t('lastName')}
             onChangeText={setLastName}
-            placeholder="Tu apellido"
+            placeholder={t('lastNamePlaceholder')}
             value={lastName}
           />
           <Field
             icon="calendar"
-            label="Fecha de nacimiento (opcional)"
+            label={t('birthDate')}
             onChangeText={setBirthDate}
             placeholder="DD/MM/AAAA"
             value={birthDate}
           />
 
           <Text style={[styles.fieldLabel, { color: colors.text }]}>
-            Sexo de referencia del laboratorio (opcional)
+            {t('biologicalSex')}
           </Text>
           <View style={styles.choiceRow}>
-            {['Femenino', 'Masculino', 'Otro'].map((option) => (
+            {[t('female'), t('male'), t('other')].map((option) => (
               <Choice
                 active={biologicalSex === option}
                 key={option}
@@ -265,7 +269,7 @@ export default function OnboardingScreen() {
               <Field
                 icon="activity"
                 inputMode="decimal"
-                label="Peso (kg)"
+                label={t('weightKg')}
                 onChangeText={setWeight}
                 placeholder="Ej. 72"
                 value={weight}
@@ -275,7 +279,7 @@ export default function OnboardingScreen() {
               <Field
                 icon="arrow-up"
                 inputMode="decimal"
-                label="Altura (cm)"
+                label={t('heightCm')}
                 onChangeText={setHeight}
                 placeholder="Ej. 175"
                 value={height}
@@ -284,7 +288,7 @@ export default function OnboardingScreen() {
           </View>
 
           <Text style={[styles.fieldLabel, { color: colors.text }]}>
-            Grupo sanguíneo (opcional)
+            {t('bloodType')}
           </Text>
           <View style={styles.bloodGrid}>
             {bloodTypes.map((option) => (
@@ -302,7 +306,7 @@ export default function OnboardingScreen() {
         <View style={[styles.privacyNote, { backgroundColor: colors.primaryLight }]}>
           <Feather color={colors.primary} name="lock" size={16} />
           <Text style={[styles.privacyText, { color: colors.primary }]}>
-            Esta información se almacena únicamente en la base de datos local.
+            {t('localOnly')}
           </Text>
         </View>
 
@@ -315,7 +319,7 @@ export default function OnboardingScreen() {
             saving && styles.disabled,
           ]}>
           <Text style={styles.primaryButtonText}>
-            {saving ? 'Guardando…' : 'Entrar en MedPocket'}
+            {saving ? t('saving') : t('enterApp')}
           </Text>
           <Feather color="#FFFFFF" name="check" size={19} />
         </Pressable>
@@ -329,6 +333,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   welcome: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 24 },
   welcomeMain: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  welcomeLanguage: { alignSelf: 'flex-end', position: 'absolute', right: 24, top: 18, width: 164, zIndex: 1 },
   logoWrap: {
     alignItems: 'center',
     borderRadius: 34,
