@@ -9,10 +9,13 @@ import {
   type AIConsentRecord,
 } from '@/services/privacy/ai-consent-service';
 import { useColors } from '@/hooks/use-colors';
+import { useLanguage } from '@/context/language-context';
 import { safeLogger } from '@/utils/safe-logger';
 
 export default function PrivacyScreen() {
   const colors = useColors();
+  const { language, tr } = useLanguage();
+  const locale = { es: 'es-ES', it: 'it-IT', en: 'en-US' }[language];
   const [consent, setConsent] = useState<AIConsentRecord | null>(null);
 
   const load = useCallback(async () => setConsent(await getAIConsent()), []);
@@ -20,19 +23,19 @@ export default function PrivacyScreen() {
 
   const withdraw = () => {
     Alert.alert(
-      'Desactivar inteligencia artificial',
-      'Las nuevas solicitudes a Gemini quedarán bloqueadas. Tus datos locales no serán eliminados.',
+      tr('Desactivar inteligencia artificial', 'Disattiva intelligenza artificiale', 'Disable artificial intelligence'),
+      tr('Las nuevas solicitudes a Gemini quedarán bloqueadas. Tus datos locales no serán eliminados.', 'Le nuove richieste a Gemini saranno bloccate. I dati locali non verranno eliminati.', 'New requests to Gemini will be blocked. Your local data will not be deleted.'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: tr('Cancelar', 'Annulla', 'Cancel'), style: 'cancel' },
         {
-          text: 'Desactivar',
+          text: tr('Desactivar', 'Disattiva', 'Disable'),
           style: 'destructive',
           onPress: async () => {
             setConsent(await withdrawAIConsent());
             safeLogger.info('AI consent withdrawn');
             Alert.alert(
-              'Inteligencia artificial desactivada',
-              'El uso de inteligencia artificial ha sido desactivado. Tus datos médicos locales no han sido modificados.'
+              tr('Inteligencia artificial desactivada', 'Intelligenza artificiale disattivata', 'Artificial intelligence disabled'),
+              tr('El uso de inteligencia artificial ha sido desactivado. Tus datos médicos locales no han sido modificados.', 'L’uso dell’intelligenza artificiale è stato disattivato. I dati medici locali non sono stati modificati.', 'Artificial intelligence has been disabled. Your local medical data has not been changed.')
             );
           },
         },
@@ -49,7 +52,7 @@ export default function PrivacyScreen() {
           <Pressable onPress={() => router.back()} style={styles.back}>
             <Feather color={colors.text} name="arrow-left" size={22} />
           </Pressable>
-          <Text style={[styles.title, { color: colors.text }]}>Privacidad</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{tr('Privacidad', 'Privacy', 'Privacy')}</Text>
           <View style={styles.back} />
         </View>
 
@@ -59,23 +62,22 @@ export default function PrivacyScreen() {
               <Feather color={colors.primary} name="zap" size={20} />
             </View>
             <View style={styles.copy}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Inteligencia artificial</Text>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>{tr('Inteligencia artificial', 'Intelligenza artificiale', 'Artificial intelligence')}</Text>
               <Text style={[styles.status, { color: active ? colors.secondary : colors.mutedForeground }]}>
-                {active ? 'Consentimiento activo' : 'Desactivada'}
+                {active ? tr('Consentimiento activo', 'Consenso attivo', 'Consent active') : tr('Desactivada', 'Disattivata', 'Disabled')}
               </Text>
             </View>
           </View>
           <Text style={[styles.body, { color: colors.mutedForeground }]}>
-            Solo los valores que confirmes se envían temporalmente a Google Gemini. MedPocket no
-            dispone de un servidor propio para almacenar tus datos médicos.
+            {tr('Solo los valores que confirmes se envían temporalmente a Google Gemini. MedPocket no dispone de un servidor propio para almacenar tus datos médicos.', 'Solo i valori confermati vengono inviati temporaneamente a Google Gemini. MedPocket non dispone di un server proprio per archiviare i tuoi dati medici.', 'Only values you confirm are temporarily sent to Google Gemini. MedPocket has no server of its own for storing your medical data.')}
           </Text>
           <View style={[styles.detail, { backgroundColor: colors.muted }]}>
             <Text style={[styles.detailText, { color: colors.text }]}>
-              Fecha de aceptación:{' '}
-              {consent?.acceptedAt ? new Date(consent.acceptedAt).toLocaleDateString() : '—'}
+              {tr('Fecha de aceptación:', 'Data di accettazione:', 'Acceptance date:')}{' '}
+              {consent?.acceptedAt ? new Date(consent.acceptedAt).toLocaleDateString(locale) : '—'}
             </Text>
             <Text style={[styles.detailText, { color: colors.text }]}>
-              Versión aceptada: {consent?.consentVersion ?? '—'}
+              {tr('Versión aceptada:', 'Versione accettata:', 'Accepted version:')} {consent?.consentVersion ?? '—'}
             </Text>
           </View>
           <Pressable
@@ -83,7 +85,7 @@ export default function PrivacyScreen() {
             style={[styles.secondaryButton, { borderColor: colors.border }]}>
             <Feather color={colors.primary} name="file-text" size={17} />
             <Text style={[styles.secondaryText, { color: colors.primary }]}>
-              Leer la política de privacidad
+              {tr('Leer la política de privacidad', 'Leggi l’informativa sulla privacy', 'Read the privacy policy')}
             </Text>
           </Pressable>
           {active ? (
@@ -91,7 +93,7 @@ export default function PrivacyScreen() {
               onPress={withdraw}
               style={[styles.dangerButton, { borderColor: colors.destructive }]}>
               <Text style={[styles.dangerText, { color: colors.destructive }]}>
-                Desactivar inteligencia artificial
+                {tr('Desactivar inteligencia artificial', 'Disattiva intelligenza artificiale', 'Disable artificial intelligence')}
               </Text>
             </Pressable>
           ) : null}

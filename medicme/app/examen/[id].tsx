@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { useColors } from '@/hooks/use-colors';
+import { useLanguage } from '@/context/language-context';
 import { safeLogger } from '@/utils/safe-logger';
 import {
   getExamById,
@@ -27,6 +28,8 @@ import { openStoredDocument } from '@/services/document-storage';
 
 export default function ExamDetailScreen() {
   const colors = useColors();
+  const { language, tr } = useLanguage();
+  const locale = { es: 'es-ES', it: 'it-IT', en: 'en-US' }[language];
   const { id } = useLocalSearchParams<{ id: string }>();
   const [exam, setExam] = useState<Exam | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -48,7 +51,7 @@ export default function ExamDetailScreen() {
       await openStoredDocument(attachment.path, attachment.mime_type);
     } catch {
       safeLogger.error('Attachment opening failed', { code: 'ATTACHMENT_OPEN_FAILED' });
-      Alert.alert('No se pudo abrir', 'No encontramos una aplicación compatible con este archivo.');
+      Alert.alert(tr('No se pudo abrir', 'Impossibile aprire', 'Could not open'), tr('No encontramos una aplicación compatible con este archivo.', 'Non è stata trovata un’applicazione compatibile con questo file.', 'No compatible application was found for this file.'));
     }
   };
 
@@ -75,24 +78,24 @@ export default function ExamDetailScreen() {
         <View style={[styles.heroIcon, { backgroundColor: colors.laboratorioLight }]}>
           <Feather color={colors.laboratorio} name="droplet" size={28} />
         </View>
-        <Text style={[styles.category, { color: colors.laboratorio }]}>EXAMEN MÉDICO</Text>
+        <Text style={[styles.category, { color: colors.laboratorio }]}>{tr('EXAMEN MÉDICO', 'ESAME MEDICO', 'MEDICAL EXAM')}</Text>
         <Text style={[styles.title, { color: colors.text }]}>{exam.type}</Text>
         <Text style={[styles.date, { color: colors.mutedForeground }]}>
-          {new Date(exam.date).toLocaleDateString(undefined, { dateStyle: 'long' })}
+          {new Date(exam.date).toLocaleDateString(locale, { dateStyle: 'long' })}
         </Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Info icon="map-pin" label="Centro médico" value="Registro personal" />
-          <Info icon="user" label="Especialidad" value="General" />
-          <Info icon="file-text" label="Notas" value={exam.notes || 'Sin notas'} />
+          <Info icon="map-pin" label={tr('Centro médico', 'Centro medico', 'Medical center')} value={tr('Registro personal', 'Registro personale', 'Personal record')} />
+          <Info icon="user" label={tr('Especialidad', 'Specialità', 'Specialty')} value={tr('General', 'Generale', 'General')} />
+          <Info icon="file-text" label={tr('Notas', 'Note', 'Notes')} value={exam.notes || tr('Sin notas', 'Nessuna nota', 'No notes')} />
         </View>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Valores ({measurements.length})
+          {tr('Valores', 'Valori', 'Values')} ({measurements.length})
         </Text>
         {measurements.length === 0 ? (
           <View style={[styles.emptyFiles, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather color={colors.mutedForeground} name="activity" size={24} />
             <Text style={[styles.emptyFilesText, { color: colors.mutedForeground }]}>
-              Este examen no tiene valores asociados.
+              {tr('Este examen no tiene valores asociados.', 'Questo esame non ha valori associati.', 'This exam has no associated values.')}
             </Text>
           </View>
         ) : (
@@ -114,7 +117,7 @@ export default function ExamDetailScreen() {
                       .replace(/\b\w/g, (letter) => letter.toUpperCase())}
                   </Text>
                   <Text style={[styles.fileMeta, { color: colors.mutedForeground }]}>
-                    Rango: {measurement.range_min ?? '—'}–{measurement.range_max ?? '—'}
+                    {tr('Rango:', 'Intervallo:', 'Range:')} {measurement.range_min ?? '—'}–{measurement.range_max ?? '—'}
                   </Text>
                 </View>
                 <Text style={[styles.measurementValue, { color: colors.text }]}>
@@ -128,13 +131,13 @@ export default function ExamDetailScreen() {
           </View>
         )}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Documentos ({attachments.length})
+          {tr('Documentos', 'Documenti', 'Documents')} ({attachments.length})
         </Text>
         {attachments.length === 0 ? (
           <View style={[styles.emptyFiles, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather color={colors.mutedForeground} name="folder" size={24} />
             <Text style={[styles.emptyFilesText, { color: colors.mutedForeground }]}>
-              Este examen no tiene archivos adjuntos.
+              {tr('Este examen no tiene archivos adjuntos.', 'Questo esame non ha file allegati.', 'This exam has no attached files.')}
             </Text>
           </View>
         ) : (
@@ -158,7 +161,7 @@ export default function ExamDetailScreen() {
                   )}
                   <View style={styles.fileCopy}>
                     <Text numberOfLines={1} style={[styles.fileName, { color: colors.text }]}>
-                      {attachment.original_name || 'Documento médico'}
+                      {attachment.original_name || tr('Documento médico', 'Documento medico', 'Medical document')}
                     </Text>
                     <Text style={[styles.fileMeta, { color: colors.mutedForeground }]}>
                       {attachment.size

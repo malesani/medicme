@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MiniChart } from '@/components/mini-chart';
 import { useProfile } from '@/context/profile-context';
+import { useLanguage } from '@/context/language-context';
 import { useColors } from '@/hooks/use-colors';
 import { safeLogger } from '@/utils/safe-logger';
 import { getNextEvent, type NextEvent } from '@/db/home';
@@ -33,6 +34,8 @@ type MetricPreview = {
 
 export default function HomeScreen() {
   const colors = useColors();
+  const { language, tr } = useLanguage();
+  const locale = { es: 'es-ES', it: 'it-IT', en: 'en-US' }[language];
   const { profile } = useProfile();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
@@ -92,9 +95,9 @@ export default function HomeScreen() {
         ]}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Buenos días</Text>
+            <Text style={[styles.greeting, { color: colors.mutedForeground }]}>{tr('Buenos días', 'Buongiorno', 'Good morning')}</Text>
             <Text style={[styles.userName, { color: colors.text }]}>
-              {profile?.first_name ?? 'Hola'}
+              {profile?.first_name ?? tr('Hola', 'Ciao', 'Hello')}
             </Text>
           </View>
           <Pressable onPress={() => router.push('/perfil')}>
@@ -114,11 +117,11 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <View style={[styles.nextExamCard, { backgroundColor: colors.primary }]}>
                   <View style={styles.nextExamTop}>
-                    <Text style={styles.nextExamLabel}>Próxima cita</Text>
+                    <Text style={styles.nextExamLabel}>{tr('Próxima cita', 'Prossimo appuntamento', 'Next appointment')}</Text>
                     <View style={styles.nextExamBadge}>
                       <Feather color="#FFFFFF" name="calendar" size={12} />
                       <Text style={styles.nextExamTime}>
-                        {new Date(nextAppointment.scheduled_at).toLocaleTimeString(undefined, {
+                        {new Date(nextAppointment.scheduled_at).toLocaleTimeString(locale, {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
@@ -128,22 +131,22 @@ export default function HomeScreen() {
                   <Text style={styles.nextExamName}>{nextAppointment.type}</Text>
                   <View style={styles.nextExamMeta}>
                     <Feather color="#DBEAFE" name="map-pin" size={13} />
-                    <Text style={styles.nextExamMetaText}>Registro personal</Text>
+                    <Text style={styles.nextExamMetaText}>{tr('Registro personal', 'Registro personale', 'Personal record')}</Text>
                   </View>
                   <View style={styles.nextExamMeta}>
                     <Feather color="#DBEAFE" name="user" size={13} />
-                    <Text style={styles.nextExamMetaText}>Sin médico asignado</Text>
+                    <Text style={styles.nextExamMetaText}>{tr('Sin médico asignado', 'Nessun medico assegnato', 'No doctor assigned')}</Text>
                   </View>
                   <View style={styles.nextExamFooter}>
                     <Text style={styles.nextExamDateFull}>
-                      {new Date(nextAppointment.scheduled_at).toLocaleDateString(undefined, {
+                      {new Date(nextAppointment.scheduled_at).toLocaleDateString(locale, {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
                       })}
                     </Text>
                     <Pressable onPress={() => router.push('/calendar')} style={styles.nextExamBtn}>
-                      <Text style={styles.nextExamBtnText}>Ver detalles</Text>
+                      <Text style={styles.nextExamBtnText}>{tr('Ver detalles', 'Vedi dettagli', 'View details')}</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -157,21 +160,21 @@ export default function HomeScreen() {
                 ]}>
                 <Feather color={colors.primary} name="calendar" size={20} />
                 <Text style={[styles.noCitaText, { color: colors.primary }]}>
-                  Añadir próxima cita
+                  {tr('Añadir próxima cita', 'Aggiungi il prossimo appuntamento', 'Add next appointment')}
                 </Text>
               </Pressable>
             )}
 
             <View style={styles.section}>
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
-                Acciones rápidas
+                {tr('Acciones rápidas', 'Azioni rapide', 'Quick actions')}
               </Text>
               <View style={styles.quickActions}>
                 <QuickAction
                   background={colors.primaryLight}
                   color={colors.primary}
                   icon="camera"
-                  label="Foto"
+                  label={tr('Foto', 'Foto', 'Photo')}
                   onPress={() => router.push('/examen/nuevo')}
                 />
                 <QuickAction
@@ -185,21 +188,21 @@ export default function HomeScreen() {
                   background={colors.secondaryLight}
                   color={colors.secondary}
                   icon="activity"
-                  label="Valor"
+                  label={tr('Valor', 'Valore', 'Value')}
                   onPress={() => router.push('/values')}
                 />
                 <QuickAction
                   background={colors.oftalmologiaLight}
                   color={colors.oftalmologia}
                   icon="calendar"
-                  label="Cita"
+                  label={tr('Cita', 'Appuntamento', 'Appointment')}
                   onPress={() => router.push('/calendar')}
                 />
               </View>
             </View>
 
             <View style={styles.section}>
-              <SectionHeader title="Últimos valores" onPress={() => router.push('/values')} />
+              <SectionHeader title={tr('Últimos valores', 'Ultimi valori', 'Latest values')} onPress={() => router.push('/values')} />
               {recentValues.length > 0 ? (
                 <View style={styles.valuesGrid}>
                   {recentValues.map((preview) => (
@@ -208,8 +211,8 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <EmptyPreview
-                  action="Registrar valor"
-                  description="Tus últimos resultados aparecerán aquí."
+                  action={tr('Registrar valor', 'Registra valore', 'Add value')}
+                  description={tr('Tus últimos resultados aparecerán aquí.', 'I tuoi ultimi risultati appariranno qui.', 'Your latest results will appear here.')}
                   icon="activity"
                   onPress={() => router.push('/values')}
                 />
@@ -217,7 +220,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.section}>
-              <SectionHeader title="Documentos recientes" onPress={() => router.push('/exams')} />
+              <SectionHeader title={tr('Documentos recientes', 'Documenti recenti', 'Recent documents')} onPress={() => router.push('/exams')} />
               {exams.length > 0 ? (
                 <View>
                   {exams.map((exam) => (
@@ -226,8 +229,8 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <EmptyPreview
-                  action="Añadir examen"
-                  description="Tus exámenes y documentos aparecerán aquí."
+                  action={tr('Añadir examen', 'Aggiungi esame', 'Add exam')}
+                  description={tr('Tus exámenes y documentos aparecerán aquí.', 'I tuoi esami e documenti appariranno qui.', 'Your exams and documents will appear here.')}
                   icon="file-text"
                   onPress={() => router.push('/examen/nuevo')}
                 />
@@ -238,7 +241,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       <Pressable
-        accessibilityLabel="Añadir examen"
+        accessibilityLabel={tr('Añadir examen', 'Aggiungi esame', 'Add exam')}
         onPress={() => router.push('/examen/nuevo')}
         style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 82 }]}>
         <Feather color="#FFFFFF" name="plus" size={27} />
@@ -273,11 +276,12 @@ function QuickAction({
 
 function SectionHeader({ title, onPress }: { title: string; onPress: () => void }) {
   const colors = useColors();
+  const { tr } = useLanguage();
   return (
     <View style={styles.sectionHeader}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
       <Pressable onPress={onPress}>
-        <Text style={[styles.seeAll, { color: colors.primary }]}>Ver todo</Text>
+        <Text style={[styles.seeAll, { color: colors.primary }]}>{tr('Ver todo', 'Vedi tutto', 'See all')}</Text>
       </Pressable>
     </View>
   );
@@ -312,6 +316,8 @@ function EmptyPreview({
 
 function ValuePreview({ preview }: { preview: MetricPreview }) {
   const colors = useColors();
+  const { language, tr } = useLanguage();
+  const locale = { es: 'es-ES', it: 'it-IT', en: 'en-US' }[language];
   const trend =
     !preview.previous || preview.latest.value === preview.previous.value
       ? 'minus'
@@ -364,7 +370,7 @@ function ValuePreview({ preview }: { preview: MetricPreview }) {
         <MiniChart color={colors.secondary} values={preview.history} />
         {preview.previous ? (
           <Text style={[styles.valuePrevious, { color: colors.mutedForeground }]}>
-            Ant: {preview.previous.value} {preview.previous.unit}
+              {tr('Prec:', 'Prec:', 'Prev:')} {preview.previous.value} {preview.previous.unit}
           </Text>
         ) : null}
       </View>
@@ -372,18 +378,18 @@ function ValuePreview({ preview }: { preview: MetricPreview }) {
         <View style={[styles.valueStatus, { backgroundColor: statusBackground }]}>
           <View style={[styles.valueStatusDot, { backgroundColor: statusColor }]} />
           <Text style={[styles.valueStatusText, { color: statusColor }]}>
-            {outsideRange ? 'Fuera de rango' : hasRange ? 'En rango' : 'Sin rango'}
+              {outsideRange ? tr('Fuera de rango', 'Fuori intervallo', 'Out of range') : hasRange ? tr('En rango', 'Nell’intervallo', 'In range') : tr('Sin rango', 'Senza intervallo', 'No range')}
           </Text>
         </View>
         <Text style={[styles.valueDate, { color: colors.mutedForeground }]}>
-          {new Date(preview.latest.captured_at).toLocaleDateString()}
+            {new Date(preview.latest.captured_at).toLocaleDateString(locale)}
         </Text>
       </View>
       {preview.latest.exam_id ? (
         <View style={[styles.valueExamLink, { borderTopColor: colors.border }]}>
           <Feather color={colors.primary} name="file-text" size={13} />
           <Text style={[styles.valueExamLinkText, { color: colors.primary }]}>
-            Ver examen y documentos
+              {tr('Ver examen y documentos', 'Vedi esame e documenti', 'View exam and documents')}
           </Text>
           <Feather color={colors.primary} name="chevron-right" size={14} />
         </View>
@@ -394,6 +400,8 @@ function ValuePreview({ preview }: { preview: MetricPreview }) {
 
 function ExamPreview({ exam }: { exam: Exam }) {
   const colors = useColors();
+  const { language, tr } = useLanguage();
+  const locale = { es: 'es-ES', it: 'it-IT', en: 'en-US' }[language];
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/examen/[id]', params: { id: exam.id } })}
@@ -406,7 +414,7 @@ function ExamPreview({ exam }: { exam: Exam }) {
           {exam.type}
         </Text>
         <Text style={[styles.examMeta, { color: colors.mutedForeground }]}>
-          {new Date(exam.date).toLocaleDateString()} · Registro personal
+            {new Date(exam.date).toLocaleDateString(locale)} · {tr('Registro personal', 'Registro personale', 'Personal record')}
         </Text>
       </View>
       <Feather color={colors.mutedForeground} name="chevron-right" size={18} />

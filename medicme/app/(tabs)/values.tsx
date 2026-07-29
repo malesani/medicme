@@ -14,6 +14,7 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 
 import { MiniChart } from '@/components/mini-chart';
+import { useLanguage } from '@/context/language-context';
 import { useColors } from '@/hooks/use-colors';
 import {
   createExamMeasurement,
@@ -33,6 +34,7 @@ type MetricGroup = {
 
 export default function ValuesScreen() {
   const colors = useColors();
+  const { tr } = useLanguage();
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [definitions, setDefinitions] = useState<MetricDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +85,10 @@ export default function ValuesScreen() {
     const min = normalizedMin ? Number(normalizedMin) : null;
     const max = normalizedMax ? Number(normalizedMax) : null;
     if (!name.trim() || !Number.isFinite(numericValue)) {
-      Alert.alert('Revisa los datos', 'Indica un nombre y un valor numérico.');
+      Alert.alert(
+        tr('Revisa los datos', 'Controlla i dati', 'Check the data'),
+        tr('Indica un nombre y un valor numérico.', 'Inserisci un nome e un valore numerico.', 'Enter a name and a numeric value.')
+      );
       return;
     }
     if (
@@ -92,8 +97,8 @@ export default function ValuesScreen() {
       (min !== null && max !== null && min >= max)
     ) {
       Alert.alert(
-        'Rango no válido',
-        'Los límites deben ser numéricos y el mínimo debe ser menor que el máximo.'
+        tr('Rango no válido', 'Intervallo non valido', 'Invalid range'),
+        tr('Los límites deben ser numéricos y el mínimo debe ser menor que el máximo.', 'I limiti devono essere numerici e il minimo deve essere inferiore al massimo.', 'The limits must be numeric and the minimum must be lower than the maximum.')
       );
       return;
     }
@@ -140,9 +145,9 @@ export default function ValuesScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <View>
-            <Text style={[styles.title, { color: colors.text }]}>Mis valores</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{tr('Mis valores', 'I miei valori', 'My values')}</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              Seguimiento de tus indicadores
+              {tr('Seguimiento de tus indicadores', 'Monitoraggio dei tuoi indicatori', 'Track your indicators')}
             </Text>
           </View>
           <Pressable
@@ -155,15 +160,14 @@ export default function ValuesScreen() {
         <View style={[styles.disclaimer, { backgroundColor: colors.primaryLight }]}>
           <Feather color={colors.primary} name="info" size={17} />
           <Text style={[styles.disclaimerText, { color: colors.primary }]}>
-            Los rangos son informativos y pueden variar según el laboratorio. No constituyen un
-            diagnóstico médico.
+            {tr('Los rangos son informativos y pueden variar según el laboratorio. No constituyen un diagnóstico médico.', 'Gli intervalli sono indicativi e possono variare in base al laboratorio. Non costituiscono una diagnosi medica.', 'Ranges are informational and may vary by laboratory. They are not a medical diagnosis.')}
           </Text>
         </View>
 
         {showForm ? (
           <View style={[styles.form, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.formTitle, { color: colors.text }]}>Registrar valor</Text>
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Tipo de valor</Text>
+            <Text style={[styles.formTitle, { color: colors.text }]}>{tr('Registrar valor', 'Registra valore', 'Add value')}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>{tr('Tipo de valor', 'Tipo di valore', 'Value type')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -210,26 +214,26 @@ export default function ValuesScreen() {
                         selectedDefinition === null ? '#FFFFFF' : colors.mutedForeground,
                     },
                   ]}>
-                  + Personalizado
+                  {tr('+ Personalizado', '+ Personalizzato', '+ Custom')}
                 </Text>
               </Pressable>
             </ScrollView>
             <TextInput
               editable={selectedDefinition === null}
               onChangeText={setName}
-              placeholder="Tipo de valor (ej. Glucosa)"
+              placeholder={tr('Tipo de valor (ej. Glucosa)', 'Tipo di valore (es. Glucosio)', 'Value type (e.g. Glucose)')}
               placeholderTextColor={colors.mutedForeground}
               style={[styles.input, { borderColor: colors.border, color: colors.text }]}
               value={name}
             />
             <Text style={[styles.fieldLabel, { color: colors.text }]}>
-              Resultado y unidad
+              {tr('Resultado y unidad', 'Risultato e unità', 'Result and unit')}
             </Text>
             <View style={styles.inputRow}>
               <TextInput
                 inputMode="decimal"
                 onChangeText={setValue}
-                placeholder="Valor"
+                placeholder={tr('Valor', 'Valore', 'Value')}
                 placeholderTextColor={colors.mutedForeground}
                 style={[
                   styles.input,
@@ -240,7 +244,7 @@ export default function ValuesScreen() {
               />
               <TextInput
                 onChangeText={setUnit}
-                placeholder="Unidad"
+                placeholder={tr('Unidad', 'Unità', 'Unit')}
                 placeholderTextColor={colors.mutedForeground}
                 style={[
                   styles.input,
@@ -252,17 +256,17 @@ export default function ValuesScreen() {
             </View>
             <View style={styles.rangeHeading}>
               <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Rango de este resultado
+                {tr('Rango de este resultado', 'Intervallo di questo risultato', 'Range for this result')}
               </Text>
               <Text style={[styles.optionalLabel, { color: colors.mutedForeground }]}>
-                Opcional
+                {tr('Opcional', 'Opzionale', 'Optional')}
               </Text>
             </View>
             <View style={styles.inputRow}>
               <TextInput
                 inputMode="decimal"
                 onChangeText={setRangeMin}
-                placeholder="Mínimo"
+                placeholder={tr('Mínimo', 'Minimo', 'Minimum')}
                 placeholderTextColor={colors.mutedForeground}
                 style={[
                   styles.input,
@@ -274,7 +278,7 @@ export default function ValuesScreen() {
               <TextInput
                 inputMode="decimal"
                 onChangeText={setRangeMax}
-                placeholder="Máximo"
+                placeholder={tr('Máximo', 'Massimo', 'Maximum')}
                 placeholderTextColor={colors.mutedForeground}
                 style={[
                   styles.input,
@@ -287,14 +291,14 @@ export default function ValuesScreen() {
             <View style={[styles.rangeNotice, { backgroundColor: colors.primaryLight }]}>
               <Feather color={colors.primary} name="info" size={14} />
               <Text style={[styles.rangeNoticeText, { color: colors.primary }]}>
-                Puedes adaptar este rango al informe. Solo se guardará en este resultado.
+                {tr('Puedes adaptar este rango al informe. Solo se guardará en este resultado.', 'Puoi adattare questo intervallo al referto. Verrà salvato solo in questo risultato.', 'You can adapt this range to the report. It will only be saved with this result.')}
               </Text>
             </View>
             <Pressable
               disabled={saving}
               onPress={save}
               style={[styles.saveButton, { backgroundColor: colors.primary }]}>
-              <Text style={styles.saveText}>{saving ? 'Guardando…' : 'Guardar valor'}</Text>
+              <Text style={styles.saveText}>{saving ? tr('Guardando…', 'Salvataggio…', 'Saving…') : tr('Guardar valor', 'Salva valore', 'Save value')}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -306,9 +310,9 @@ export default function ValuesScreen() {
             <View style={[styles.emptyIcon, { backgroundColor: colors.muted }]}>
               <Feather color={colors.mutedForeground} name="activity" size={28} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Sin valores registrados</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{tr('Sin valores registrados', 'Nessun valore registrato', 'No values recorded')}</Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Añade tu primer resultado para comenzar el seguimiento.
+              {tr('Añade tu primer resultado para comenzar el seguimiento.', 'Aggiungi il primo risultato per iniziare il monitoraggio.', 'Add your first result to start tracking.')}
             </Text>
           </View>
         ) : (
@@ -325,6 +329,8 @@ export default function ValuesScreen() {
 
 function ValueCard({ group }: { group: MetricGroup }) {
   const colors = useColors();
+  const { language, tr } = useLanguage();
+  const locale = { es: 'es-ES', it: 'it-IT', en: 'en-US' }[language];
   const trend =
     group.previous === undefined
       ? 'minus'
@@ -378,7 +384,7 @@ function ValueCard({ group }: { group: MetricGroup }) {
         <MiniChart color={colors.secondary} values={group.history} />
         {group.previous ? (
           <Text style={[styles.previous, { color: colors.mutedForeground }]}>
-            Ant: {group.previous.value} {group.previous.unit}
+              {tr('Prec:', 'Prec:', 'Prev:')} {group.previous.value} {group.previous.unit}
           </Text>
         ) : null}
       </View>
@@ -386,18 +392,18 @@ function ValueCard({ group }: { group: MetricGroup }) {
         <View style={[styles.status, { backgroundColor: statusBackground }]}>
           <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
           <Text style={[styles.statusText, { color: statusColor }]}>
-            {outsideRange ? 'Fuera de rango' : hasRange ? 'En rango' : 'Sin rango'}
+              {outsideRange ? tr('Fuera de rango', 'Fuori intervallo', 'Out of range') : hasRange ? tr('En rango', 'Nell’intervallo', 'In range') : tr('Sin rango', 'Senza intervallo', 'No range')}
           </Text>
         </View>
         <Text style={[styles.cardDate, { color: colors.mutedForeground }]}>
-          {new Date(group.latest.captured_at).toLocaleDateString()}
+            {new Date(group.latest.captured_at).toLocaleDateString(locale)}
         </Text>
       </View>
       {group.latest.exam_id ? (
         <View style={[styles.examLink, { borderTopColor: colors.border }]}>
           <Feather color={colors.primary} name="file-text" size={14} />
           <Text style={[styles.examLinkText, { color: colors.primary }]}>
-            Ver examen y documentos
+              {tr('Ver examen y documentos', 'Vedi esame e documenti', 'View exam and documents')}
           </Text>
           <Feather color={colors.primary} name="chevron-right" size={15} />
         </View>

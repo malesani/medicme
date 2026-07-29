@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColors } from '@/hooks/use-colors';
+import { useLanguage } from '@/context/language-context';
 import { safeLogger } from '@/utils/safe-logger';
 import { getDb } from '@/db';
 
@@ -27,10 +28,11 @@ type CalendarEvent = {
   reminder_minutes: number | null;
 };
 
-const weekDays = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
 export default function CalendarScreen() {
   const colors = useColors();
+  const { language, tr } = useLanguage();
+  const locale = { es: 'es-ES', it: 'it-IT', en: 'en-US' }[language];
+  const weekDays = tr('L,M,X,J,V,S,D', 'L,M,M,G,V,S,D', 'M,T,W,T,F,S,S').split(',');
   const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,14 +113,14 @@ export default function CalendarScreen() {
   const addEvent = async () => {
     const timeMatch = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(scheduledTime.trim());
     if (!eventType.trim() || !timeMatch) {
-      Alert.alert('Revisa los datos', 'Indica un nombre y una hora válida en formato HH:MM.');
+      Alert.alert(tr('Revisa los datos', 'Controlla i dati', 'Check the data'), tr('Indica un nombre y una hora válida en formato HH:MM.', 'Inserisci un nome e un orario valido nel formato HH:MM.', 'Enter a name and valid time in HH:MM format.'));
       return;
     }
 
     const scheduled = new Date(scheduledDate);
     scheduled.setHours(Number(timeMatch[1]), Number(timeMatch[2]), 0, 0);
     if (scheduled <= new Date()) {
-      Alert.alert('Fecha no válida', 'La cita debe programarse para una fecha y hora futuras.');
+      Alert.alert(tr('Fecha no válida', 'Data non valida', 'Invalid date'), tr('La cita debe programarse para una fecha y hora futuras.', 'L’appuntamento deve essere programmato per una data e un’ora future.', 'The appointment must be scheduled for a future date and time.'));
       return;
     }
 
@@ -144,17 +146,17 @@ export default function CalendarScreen() {
       await load();
     } catch {
       safeLogger.error('Appointment creation failed', { code: 'APPOINTMENT_CREATE_FAILED' });
-      Alert.alert('Error', 'No se pudo guardar la cita.');
+      Alert.alert(tr('Error', 'Errore', 'Error'), tr('No se pudo guardar la cita.', 'Impossibile salvare l’appuntamento.', 'The appointment could not be saved.'));
     } finally {
       setSaving(false);
     }
   };
 
   const deleteEvent = (event: CalendarEvent) => {
-    Alert.alert('Eliminar cita', `¿Quieres eliminar “${event.type}”?`, [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert(tr('Eliminar cita', 'Elimina appuntamento', 'Delete appointment'), tr(`¿Quieres eliminar “${event.type}”?`, `Vuoi eliminare “${event.type}”?`, `Do you want to delete “${event.type}”?`), [
+      { text: tr('Cancelar', 'Annulla', 'Cancel'), style: 'cancel' },
       {
-        text: 'Eliminar',
+        text: tr('Eliminar', 'Elimina', 'Delete'),
         style: 'destructive',
         onPress: async () => {
           const db = await getDb();
@@ -209,13 +211,13 @@ export default function CalendarScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
-            <Text style={[styles.title, { color: colors.text }]}>Citas</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{tr('Citas', 'Appuntamenti', 'Appointments')}</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              Organiza tus próximos controles
+              {tr('Organiza tus próximos controles', 'Organizza i tuoi prossimi controlli', 'Organize your upcoming checkups')}
             </Text>
           </View>
           <Pressable
-            accessibilityLabel={showForm ? 'Cerrar formulario' : 'Añadir cita'}
+            accessibilityLabel={showForm ? tr('Cerrar formulario', 'Chiudi modulo', 'Close form') : tr('Añadir cita', 'Aggiungi appuntamento', 'Add appointment')}
             onPress={() => {
               if (showForm) {
                 resetForm();
@@ -234,7 +236,7 @@ export default function CalendarScreen() {
               <Feather color={colors.mutedForeground} name="chevron-left" size={20} />
             </Pressable>
             <Text style={[styles.monthTitle, { color: colors.text }]}>
-              {visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+              {visibleMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
             </Text>
             <Pressable onPress={() => changeMonth(1)} style={styles.monthButton}>
               <Feather color={colors.mutedForeground} name="chevron-right" size={20} />
@@ -256,7 +258,7 @@ export default function CalendarScreen() {
                 <View key={`${day ?? 'empty'}-${index}`} style={styles.dayCell}>
                   {day ? (
                     <Pressable
-                      accessibilityLabel={`Seleccionar ${day}`}
+                      accessibilityLabel={`${tr('Seleccionar', 'Seleziona', 'Select')} ${day}`}
                       onPress={() => selectCalendarDay(day)}
                       style={[
                         styles.dayCircle,
@@ -293,25 +295,25 @@ export default function CalendarScreen() {
 
         {showForm ? (
           <View style={[styles.form, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.formTitle, { color: colors.text }]}>Nueva cita</Text>
+            <Text style={[styles.formTitle, { color: colors.text }]}>{tr('Nueva cita', 'Nuovo appuntamento', 'New appointment')}</Text>
             <TextInput
               onChangeText={setEventType}
-              placeholder="Nombre de la cita o examen"
+              placeholder={tr('Nombre de la cita o examen', 'Nome dell’appuntamento o dell’esame', 'Appointment or exam name')}
               placeholderTextColor={colors.mutedForeground}
               style={[styles.input, { borderColor: colors.border, color: colors.text }]}
               value={eventType}
             />
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Fecha</Text>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>{tr('Fecha', 'Data', 'Date')}</Text>
             <View style={[styles.dateSelector, { borderColor: colors.border }]}>
               <Pressable
-                accessibilityLabel="Día anterior"
+                accessibilityLabel={tr('Día anterior', 'Giorno precedente', 'Previous day')}
                 onPress={() => changeSelectedDate(-1)}
                 style={styles.dateSelectorButton}>
                 <Feather color={colors.mutedForeground} name="chevron-left" size={20} />
               </Pressable>
               <View style={styles.selectedDateCopy}>
                 <Text style={[styles.selectedDate, { color: colors.text }]}>
-                  {scheduledDate.toLocaleDateString(undefined, {
+                  {scheduledDate.toLocaleDateString(locale, {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'long',
@@ -319,17 +321,17 @@ export default function CalendarScreen() {
                   })}
                 </Text>
                 <Text style={[styles.selectedDateHint, { color: colors.mutedForeground }]}>
-                  También puedes tocar un día del calendario
+                  {tr('También puedes tocar un día del calendario', 'Puoi anche toccare un giorno del calendario', 'You can also tap a calendar day')}
                 </Text>
               </View>
               <Pressable
-                accessibilityLabel="Día siguiente"
+                accessibilityLabel={tr('Día siguiente', 'Giorno successivo', 'Next day')}
                 onPress={() => changeSelectedDate(1)}
                 style={styles.dateSelectorButton}>
                 <Feather color={colors.mutedForeground} name="chevron-right" size={20} />
               </Pressable>
             </View>
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Hora</Text>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>{tr('Hora', 'Ora', 'Time')}</Text>
             <View style={[styles.timeInputWrap, { borderColor: colors.border }]}>
               <Feather color={colors.mutedForeground} name="clock" size={18} />
               <TextInput
@@ -345,7 +347,7 @@ export default function CalendarScreen() {
             <TextInput
               multiline
               onChangeText={setNotes}
-              placeholder="Centro, médico y preparación"
+              placeholder={tr('Centro, médico y preparación', 'Centro, medico e preparazione', 'Center, doctor and preparation')}
               placeholderTextColor={colors.mutedForeground}
               style={[
                 styles.input,
@@ -358,16 +360,16 @@ export default function CalendarScreen() {
               disabled={saving}
               onPress={addEvent}
               style={[styles.saveButton, { backgroundColor: colors.primary }]}>
-              <Text style={styles.saveText}>{saving ? 'Guardando…' : 'Guardar cita'}</Text>
+              <Text style={styles.saveText}>{saving ? tr('Guardando…', 'Salvataggio…', 'Saving…') : tr('Guardar cita', 'Salva appuntamento', 'Save appointment')}</Text>
             </Pressable>
           </View>
         ) : null}
 
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Próximas citas</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{tr('Próximas citas', 'Prossimi appuntamenti', 'Upcoming appointments')}</Text>
             <Text style={[styles.sectionCount, { color: colors.mutedForeground }]}>
-              {upcomingEvents.length} pendientes
+              {upcomingEvents.length} {tr('pendientes', 'in programma', 'pending')}
             </Text>
           </View>
         </View>
@@ -379,15 +381,15 @@ export default function CalendarScreen() {
             <View style={[styles.emptyIcon, { backgroundColor: colors.muted }]}>
               <Feather color={colors.mutedForeground} name="calendar" size={27} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No hay citas próximas</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{tr('No hay citas próximas', 'Nessun prossimo appuntamento', 'No upcoming appointments')}</Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Añade tu próxima consulta o examen para recordarlo.
+              {tr('Añade tu próxima consulta o examen para recordarlo.', 'Aggiungi la prossima visita o esame per ricordarlo.', 'Add your next visit or exam as a reminder.')}
             </Text>
           </View>
         ) : (
           <View style={styles.list}>
             {upcomingEvents.map((event) => (
-              <AppointmentCard event={event} key={event.id} onDelete={() => deleteEvent(event)} />
+              <AppointmentCard event={event} key={event.id} locale={locale} onDelete={() => deleteEvent(event)} />
             ))}
           </View>
         )}
@@ -398,12 +400,15 @@ export default function CalendarScreen() {
 
 function AppointmentCard({
   event,
+  locale,
   onDelete,
 }: {
   event: CalendarEvent;
+  locale: string;
   onDelete: () => void;
 }) {
   const colors = useColors();
+  const { tr } = useLanguage();
   const date = new Date(event.scheduled_at);
   return (
     <Pressable
@@ -416,7 +421,7 @@ function AppointmentCard({
       <View style={[styles.dateColumn, { backgroundColor: colors.primaryLight }]}>
         <Text style={[styles.dayNumber, { color: colors.primary }]}>{date.getDate()}</Text>
         <Text style={[styles.monthShort, { color: colors.primary }]}>
-          {date.toLocaleDateString(undefined, { month: 'short' }).replace('.', '')}
+          {date.toLocaleDateString(locale, { month: 'short' }).replace('.', '')}
         </Text>
       </View>
       <View style={styles.appointmentInfo}>
@@ -429,24 +434,24 @@ function AppointmentCard({
         <View style={styles.metaRow}>
           <Feather color={colors.mutedForeground} name="clock" size={12} />
           <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
-            {date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+              {date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
           </Text>
           <Text style={[styles.separator, { color: colors.border }]}>·</Text>
           <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
-            {date.toLocaleDateString(undefined, { dateStyle: 'medium' })}
+              {date.toLocaleDateString(locale, { dateStyle: 'medium' })}
           </Text>
         </View>
         <View style={styles.metaRow}>
           <Feather color={colors.mutedForeground} name="map-pin" size={12} />
           <Text numberOfLines={1} style={[styles.metaText, { color: colors.mutedForeground }]}>
-            {event.notes || 'Centro por confirmar'}
+              {event.notes || tr('Centro por confirmar', 'Centro da confermare', 'Center to be confirmed')}
           </Text>
         </View>
         {event.reminder_minutes ? (
           <View style={styles.reminderRow}>
             <Feather color={colors.primary} name="bell" size={11} />
             <Text style={[styles.reminderText, { color: colors.primary }]}>
-              Recordatorio activado
+                {tr('Recordatorio activado', 'Promemoria attivato', 'Reminder enabled')}
             </Text>
           </View>
         ) : null}

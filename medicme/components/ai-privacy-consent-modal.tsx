@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useColors } from '@/hooks/use-colors';
+import { useLanguage } from '@/context/language-context';
 
 type Props = {
   visible: boolean;
@@ -12,6 +13,7 @@ type Props = {
 
 export function AIPrivacyConsentModal({ visible, onCancel, onAccept }: Props) {
   const colors = useColors();
+  const { tr } = useLanguage();
   const [checked, setChecked] = useState(false);
 
   const cancel = () => {
@@ -33,17 +35,13 @@ export function AIPrivacyConsentModal({ visible, onCancel, onAccept }: Props) {
             <View style={[styles.icon, { backgroundColor: colors.primaryLight }]}>
               <Feather color={colors.primary} name="shield" size={25} />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>Uso de inteligencia artificial</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{tr('Uso de inteligencia artificial', 'Uso dell’intelligenza artificiale', 'Use of artificial intelligence')}</Text>
             <Text style={[styles.body, { color: colors.mutedForeground }]}>
-              La función de inteligencia artificial enviará a Google Gemini únicamente los datos
-              médicos que selecciones para realizar la operación solicitada.{'\n\n'}
-              Durante esta operación, la información seleccionada saldrá temporalmente de tu
-              dispositivo y será procesada por un servicio externo.{'\n\n'}
-              MedPocket no almacena tus datos médicos en servidores propios. La inteligencia
-              artificial es opcional y puedes utilizar el resto de la aplicación sin activarla.
-              {'\n\n'}
-              Los resultados pueden contener errores. Esta función no proporciona diagnósticos ni
-              sustituye la valoración de un profesional sanitario.
+              {tr(
+                'La función de inteligencia artificial enviará a Google Gemini únicamente los datos médicos que selecciones para realizar la operación solicitada.\n\nDurante esta operación, la información seleccionada saldrá temporalmente de tu dispositivo y será procesada por un servicio externo.\n\nMedPocket no almacena tus datos médicos en servidores propios. La inteligencia artificial es opcional y puedes utilizar el resto de la aplicación sin activarla.\n\nLos resultados pueden contener errores. Esta función no proporciona diagnósticos ni sustituye la valoración de un profesional sanitario.',
+                'La funzione di intelligenza artificiale invierà a Google Gemini solo i dati medici selezionati per eseguire l’operazione richiesta.\n\nDurante questa operazione, le informazioni selezionate usciranno temporaneamente dal dispositivo e saranno elaborate da un servizio esterno.\n\nMedPocket non archivia i tuoi dati medici su server propri. L’intelligenza artificiale è facoltativa e puoi usare il resto dell’app senza attivarla.\n\nI risultati possono contenere errori. Questa funzione non fornisce diagnosi e non sostituisce la valutazione di un professionista sanitario.',
+                'The artificial intelligence feature will send only the medical data you select to Google Gemini to perform the requested operation.\n\nDuring this operation, the selected information will temporarily leave your device and be processed by an external service.\n\nMedPocket does not store your medical data on its own servers. AI is optional and you can use the rest of the app without enabling it.\n\nResults may contain errors. This feature does not provide diagnoses or replace assessment by a healthcare professional.'
+              )}
             </Text>
             <Pressable
               accessibilityRole="checkbox"
@@ -59,14 +57,13 @@ export function AIPrivacyConsentModal({ visible, onCancel, onAccept }: Props) {
                 {checked ? <Feather color="#FFFFFF" name="check" size={15} /> : null}
               </View>
               <Text style={[styles.checkboxText, { color: colors.text }]}>
-                Autorizo el envío y tratamiento de los datos médicos que seleccione mediante Google
-                Gemini para realizar la operación solicitada.
+                {tr('Autorizo el envío y tratamiento de los datos médicos que seleccione mediante Google Gemini para realizar la operación solicitada.', 'Autorizzo l’invio e il trattamento tramite Google Gemini dei dati medici che seleziono per eseguire l’operazione richiesta.', 'I authorize the selected medical data to be sent to and processed by Google Gemini for the requested operation.')}
               </Text>
             </Pressable>
           </ScrollView>
           <View style={[styles.actions, { borderTopColor: colors.border }]}>
             <Pressable onPress={cancel} style={[styles.button, { borderColor: colors.border }]}>
-              <Text style={[styles.cancelText, { color: colors.text }]}>Cancelar</Text>
+              <Text style={[styles.cancelText, { color: colors.text }]}>{tr('Cancelar', 'Annulla', 'Cancel')}</Text>
             </Pressable>
             <Pressable
               disabled={!checked}
@@ -80,7 +77,7 @@ export function AIPrivacyConsentModal({ visible, onCancel, onAccept }: Props) {
                   styles.acceptText,
                   { color: checked ? '#FFFFFF' : colors.mutedForeground },
                 ]}>
-                Aceptar y continuar
+                {tr('Aceptar y continuar', 'Accetta e continua', 'Accept and continue')}
               </Text>
             </Pressable>
           </View>

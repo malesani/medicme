@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import type { SanitizedMedicalValue } from '@/services/privacy/medical-data-sanitizer';
 import { useColors } from '@/hooks/use-colors';
+import { useLanguage } from '@/context/language-context';
 
 type Props = {
   visible: boolean;
@@ -13,6 +14,7 @@ type Props = {
 
 export function AIDataPreviewModal({ visible, values, onCancel, onConfirm }: Props) {
   const colors = useColors();
+  const { tr } = useLanguage();
 
   return (
     <Modal animationType="slide" onRequestClose={onCancel} transparent visible={visible}>
@@ -23,9 +25,9 @@ export function AIDataPreviewModal({ visible, values, onCancel, onConfirm }: Pro
               <Feather color={colors.primary} name="send" size={21} />
             </View>
             <View style={styles.headerCopy}>
-              <Text style={[styles.title, { color: colors.text }]}>Datos que se enviarán a Gemini</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{tr('Datos que se enviarán a Gemini', 'Dati che saranno inviati a Gemini', 'Data to be sent to Gemini')}</Text>
               <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                Revisa y confirma el contenido de esta solicitud.
+                {tr('Revisa y confirma el contenido de esta solicitud.', 'Controlla e conferma il contenuto della richiesta.', 'Review and confirm the contents of this request.')}
               </Text>
             </View>
           </View>
@@ -41,24 +43,23 @@ export function AIDataPreviewModal({ visible, values, onCancel, onConfirm }: Pro
                   {value.value} {value.unit}
                 </Text>
                 <Text style={[styles.range, { color: colors.mutedForeground }]}>
-                  Rango: {value.referenceRange.min ?? '—'}–{value.referenceRange.max ?? '—'}{' '}
+                  {tr('Rango:', 'Intervallo:', 'Range:')} {value.referenceRange.min ?? '—'}–{value.referenceRange.max ?? '—'}{' '}
                   {value.unit}
                 </Text>
               </View>
             ))}
             <Text style={[styles.notice, { color: colors.mutedForeground }]}>
-              No se enviarán tu nombre, datos de contacto, identificadores, rutas de archivos ni el
-              resto de tu historial.
+              {tr('No se enviarán tu nombre, datos de contacto, identificadores, rutas de archivos ni el resto de tu historial.', 'Non saranno inviati nome, contatti, identificatori, percorsi dei file né il resto della cronologia.', 'Your name, contact details, identifiers, file paths and the rest of your history will not be sent.')}
             </Text>
           </ScrollView>
           <View style={[styles.actions, { borderTopColor: colors.border }]}>
             <Pressable onPress={onCancel} style={[styles.button, { borderColor: colors.border }]}>
-              <Text style={[styles.cancelText, { color: colors.text }]}>Cancelar</Text>
+              <Text style={[styles.cancelText, { color: colors.text }]}>{tr('Cancelar', 'Annulla', 'Cancel')}</Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}
               style={[styles.button, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              <Text style={styles.confirmText}>Enviar a Gemini</Text>
+              <Text style={styles.confirmText}>{tr('Enviar a Gemini', 'Invia a Gemini', 'Send to Gemini')}</Text>
             </Pressable>
           </View>
         </View>

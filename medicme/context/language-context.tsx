@@ -197,6 +197,7 @@ type LanguageContextValue = {
   ready: boolean;
   setLanguage: (language: AppLanguage) => Promise<void>;
   t: (key: TranslationKey, variables?: Variables) => string;
+  tr: (spanish: string, italian: string, english: string) => string;
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -242,9 +243,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     [language]
   );
 
+  const tr = useCallback(
+    (spanish: string, italian: string, english: string) =>
+      ({ es: spanish, it: italian, en: english })[language],
+    [language]
+  );
+
   const value = useMemo(
-    () => ({ language, ready, setLanguage, t }),
-    [language, ready, setLanguage, t]
+    () => ({ language, ready, setLanguage, t, tr }),
+    [language, ready, setLanguage, t, tr]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

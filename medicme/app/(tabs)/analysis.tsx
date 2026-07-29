@@ -14,6 +14,7 @@ import {
 
 import { listLatestMeasurements, type Measurement } from '@/db';
 import { useColors } from '@/hooks/use-colors';
+import { useLanguage } from '@/context/language-context';
 import {
   analyzeHealthMeasurements,
   type AgentFinding,
@@ -45,6 +46,8 @@ function metricName(code: string) {
 
 export default function AnalysisScreen() {
   const colors = useColors();
+  const { language, tr } = useLanguage();
+  const locale = { es: 'es-ES', it: 'it-IT', en: 'en-US' }[language];
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -91,12 +94,12 @@ export default function AnalysisScreen() {
     try {
       setAnalyzing(true);
       setAnalysis(null);
-      setAnalysis(await analyzeHealthMeasurements(measurements));
+      setAnalysis(await analyzeHealthMeasurements(measurements, language));
     } catch {
       safeLogger.error('AI request failed', { code: 'AI_REQUEST_FAILED' });
       Alert.alert(
-        'No se pudo realizar el análisis',
-        'No fue posible completar el análisis. Inténtalo nuevamente.'
+        tr('No se pudo realizar el análisis', 'Impossibile eseguire l’analisi', 'The analysis could not be completed'),
+        tr('No fue posible completar el análisis. Inténtalo nuevamente.', 'Non è stato possibile completare l’analisi. Riprova.', 'The analysis could not be completed. Please try again.')
       );
     } finally {
       setAnalyzing(false);
@@ -111,8 +114,8 @@ export default function AnalysisScreen() {
             <Feather color="#FFFFFF" name="heart" size={25} />
           </View>
           <View style={styles.headerCopy}>
-            <Text style={[styles.eyebrow, { color: colors.primary }]}>ASISTENTE DE SALUD</Text>
-            <Text style={[styles.title, { color: colors.text }]}>Mi análisis</Text>
+            <Text style={[styles.eyebrow, { color: colors.primary }]}>{tr('ASISTENTE DE SALUD', 'ASSISTENTE SALUTE', 'HEALTH ASSISTANT')}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{tr('Mi análisis', 'La mia analisi', 'My analysis')}</Text>
           </View>
         </View>
 
@@ -122,16 +125,15 @@ export default function AnalysisScreen() {
             { backgroundColor: colors.primaryLight, borderColor: colors.primary },
           ]}>
           <Text style={[styles.heroTitle, { color: colors.text }]}>
-            Entiende mejor tus últimos resultados
+            {tr('Entiende mejor tus últimos resultados', 'Comprendi meglio i tuoi ultimi risultati', 'Understand your latest results')}
           </Text>
           <Text style={[styles.heroText, { color: colors.mutedForeground }]}>
-            Revisamos tus valores más recientes y sus rangos para explicarte qué significan de
-            manera sencilla.
+            {tr('Revisamos tus valores más recientes y sus rangos para explicarte qué significan de manera sencilla.', 'Esaminiamo i valori più recenti e i relativi intervalli per spiegarti in modo semplice cosa significano.', 'We review your latest values and ranges to explain what they mean in simple terms.')}
           </Text>
           <View style={styles.heroMeta}>
             <Feather color={colors.primary} name="shield" size={15} />
             <Text style={[styles.heroMetaText, { color: colors.primary }]}>
-              Información orientativa, no un diagnóstico
+              {tr('Información orientativa, no un diagnóstico', 'Informazioni indicative, non una diagnosi', 'Informational guidance, not a diagnosis')}
             </Text>
           </View>
         </View>
@@ -144,31 +146,31 @@ export default function AnalysisScreen() {
               <Feather color={colors.mutedForeground} name="activity" size={28} />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              Necesito algunos valores
+              {tr('Necesito algunos valores', 'Servono alcuni valori', 'Some values are needed')}
             </Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Registra al menos un resultado con su unidad y rango para preparar tu análisis.
+              {tr('Registra al menos un resultado con su unidad y rango para preparar tu análisis.', 'Registra almeno un risultato con unità e intervallo per preparare l’analisi.', 'Record at least one result with its unit and range to prepare your analysis.')}
             </Text>
             <Pressable
               onPress={() => router.push('/(tabs)/values')}
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}>
               <Feather color="#FFFFFF" name="plus" size={18} />
-              <Text style={styles.primaryButtonText}>Añadir un valor</Text>
+              <Text style={styles.primaryButtonText}>{tr('Añadir un valor', 'Aggiungi un valore', 'Add a value')}</Text>
             </Pressable>
           </View>
         ) : (
           <>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Resumen reciente</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{tr('Resumen reciente', 'Riepilogo recente', 'Recent summary')}</Text>
             <View style={styles.summaryRow}>
               <SummaryCard
                 color={colors.destructive}
-                label="A revisar"
+                label={tr('A revisar', 'Da controllare', 'Review')}
                 value={overview.outside}
               />
-              <SummaryCard color={colors.secondary} label="En rango" value={overview.normal} />
+              <SummaryCard color={colors.secondary} label={tr('En rango', 'Nell’intervallo', 'In range')} value={overview.normal} />
               <SummaryCard
                 color={colors.mutedForeground}
-                label="Sin rango"
+                label={tr('Sin rango', 'Senza intervallo', 'No range')}
                 value={overview.unknown}
               />
             </View>
@@ -180,10 +182,10 @@ export default function AnalysisScreen() {
                 </View>
                 <View style={styles.analysisHeadingCopy}>
                   <Text style={[styles.analysisTitle, { color: colors.text }]}>
-                    Listo para analizar
+                    {tr('Listo para analizar', 'Pronto per l’analisi', 'Ready to analyze')}
                   </Text>
                   <Text style={[styles.analysisSubtitle, { color: colors.mutedForeground }]}>
-                    {measurements.length} valores recientes seleccionados
+                    {measurements.length} {tr('valores recientes seleccionados', 'valori recenti selezionati', 'recent values selected')}
                   </Text>
                 </View>
               </View>
@@ -208,7 +210,7 @@ export default function AnalysisScreen() {
                   <Feather color="#FFFFFF" name="message-circle" size={18} />
                 )}
                 <Text style={styles.primaryButtonText}>
-                  {analyzing ? 'Analizando…' : 'Analizar mis valores'}
+                  {analyzing ? tr('Analizando…', 'Analisi…', 'Analyzing…') : tr('Analizar mis valores', 'Analizza i miei valori', 'Analyze my values')}
                 </Text>
               </Pressable>
             </View>
@@ -221,10 +223,10 @@ export default function AnalysisScreen() {
                   </View>
                   <View style={styles.analysisHeadingCopy}>
                     <Text style={[styles.analysisTitle, { color: colors.text }]}>
-                      Tu análisis está listo
+                      {tr('Tu análisis está listo', 'La tua analisi è pronta', 'Your analysis is ready')}
                     </Text>
                     <Text style={[styles.analysisSubtitle, { color: colors.mutedForeground }]}>
-                      Explicación de tus resultados más recientes
+                      {tr('Explicación de tus resultados más recientes', 'Spiegazione dei risultati più recenti', 'Explanation of your latest results')}
                     </Text>
                   </View>
                 </View>
@@ -289,12 +291,12 @@ export default function AnalysisScreen() {
           : colors.mutedForeground;
     const statusText =
       status === 'high'
-        ? 'Alto'
+        ? tr('Alto', 'Alto', 'High')
         : status === 'low'
-          ? 'Bajo'
+          ? tr('Bajo', 'Basso', 'Low')
           : status === 'normal'
-            ? 'En rango'
-            : 'Sin rango';
+            ? tr('En rango', 'Nell’intervallo', 'In range')
+            : tr('Sin rango', 'Senza intervallo', 'No range');
 
     return (
       <View style={[styles.measurementRow, { borderBottomColor: colors.border }]}>
@@ -303,7 +305,7 @@ export default function AnalysisScreen() {
             {metricName(measurement.metric_code)}
           </Text>
           <Text style={[styles.measurementDate, { color: colors.mutedForeground }]}>
-            {new Date(measurement.captured_at).toLocaleDateString()}
+            {new Date(measurement.captured_at).toLocaleDateString(locale)}
           </Text>
         </View>
         <View style={styles.measurementResult}>
@@ -345,7 +347,7 @@ export default function AnalysisScreen() {
             {finding.explanation}
           </Text>
         </View>
-        <Text style={[styles.suggestionTitle, { color: colors.text }]}>Para cuidarte</Text>
+        <Text style={[styles.suggestionTitle, { color: colors.text }]}>{tr('Para cuidarte', 'Per prenderti cura di te', 'To take care of yourself')}</Text>
         {finding.suggestions.map((suggestion) => (
           <View key={suggestion} style={styles.suggestionRow}>
             <Feather color={colors.secondary} name="check" size={15} />

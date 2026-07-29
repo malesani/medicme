@@ -5,18 +5,11 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SearchBar } from '@/components/search-bar';
+import { useLanguage } from '@/context/language-context';
 import { useColors } from '@/hooks/use-colors';
 import { listExams, type Exam } from '@/db';
 
 type Filter = 'todos' | 'laboratorio' | 'cardiologia' | 'radiologia' | 'general';
-
-const filters: { key: Filter; label: string }[] = [
-  { key: 'todos', label: 'Todos' },
-  { key: 'laboratorio', label: 'Laboratorio' },
-  { key: 'cardiologia', label: 'Cardiología' },
-  { key: 'radiologia', label: 'Radiología' },
-  { key: 'general', label: 'General' },
-];
 
 function categoryFor(exam: Exam): Exclude<Filter, 'todos'> {
   const text = `${exam.type} ${exam.notes ?? ''}`.toLowerCase();
@@ -28,11 +21,20 @@ function categoryFor(exam: Exam): Exclude<Filter, 'todos'> {
 
 export default function ExamsScreen() {
   const colors = useColors();
+  const { language, tr } = useLanguage();
+  const locale = { es: 'es-ES', it: 'it-IT', en: 'en-US' }[language];
   const insets = useSafeAreaInsets();
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('todos');
+  const filters: { key: Filter; label: string }[] = [
+    { key: 'todos', label: tr('Todos', 'Tutti', 'All') },
+    { key: 'laboratorio', label: tr('Laboratorio', 'Laboratorio', 'Laboratory') },
+    { key: 'cardiologia', label: tr('Cardiología', 'Cardiologia', 'Cardiology') },
+    { key: 'radiologia', label: tr('Radiología', 'Radiologia', 'Radiology') },
+    { key: 'general', label: tr('General', 'Generale', 'General') },
+  ];
 
   const load = useCallback(async () => {
     try {
@@ -64,13 +66,13 @@ export default function ExamsScreen() {
             { paddingTop: Platform.OS === 'web' ? 24 : insets.top + 16 },
           ]}>
           <View>
-            <Text style={[styles.title, { color: colors.text }]}>Exámenes</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{tr('Exámenes', 'Esami', 'Exams')}</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              {exams.length} documentos médicos
+              {exams.length} {tr('documentos médicos', 'documenti medici', 'medical documents')}
             </Text>
           </View>
           <Pressable
-            accessibilityLabel="Añadir examen"
+            accessibilityLabel={tr('Añadir examen', 'Aggiungi esame', 'Add exam')}
             onPress={() => router.push('/examen/nuevo')}
             style={({ pressed }) => [
               styles.headerButton,
@@ -84,7 +86,7 @@ export default function ExamsScreen() {
         <View style={[styles.searchArea, { backgroundColor: colors.background }]}>
           <SearchBar
             onChangeText={setSearch}
-            placeholder="Buscar exámenes, centros, etiquetas…"
+            placeholder={tr('Buscar exámenes, centros, etiquetas…', 'Cerca esami, centri, etichette…', 'Search exams, centers, tags…')}
             value={search}
           />
           <ScrollView
@@ -120,15 +122,15 @@ export default function ExamsScreen() {
             <View style={[styles.emptyIcon, { backgroundColor: colors.muted }]}>
               <Feather color={colors.mutedForeground} name="clipboard" size={28} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No hay resultados</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{tr('No hay resultados', 'Nessun risultato', 'No results')}</Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Prueba con otra búsqueda o añade un examen.
+              {tr('Prueba con otra búsqueda o añade un examen.', 'Prova un’altra ricerca o aggiungi un esame.', 'Try another search or add an exam.')}
             </Text>
           </View>
         ) : (
           <View style={styles.list}>
             {visibleExams.map((exam) => (
-              <ExamCard key={exam.id} exam={exam} />
+              <ExamCard key={exam.id} exam={exam} locale={locale} />
             ))}
           </View>
         )}
@@ -137,8 +139,9 @@ export default function ExamsScreen() {
   );
 }
 
-function ExamCard({ exam }: { exam: Exam }) {
+function ExamCard({ exam, locale }: { exam: Exam; locale: string }) {
   const colors = useColors();
+  const { tr } = useLanguage();
   const category = categoryFor(exam);
   const config = {
     laboratorio: {
@@ -148,13 +151,13 @@ function ExamCard({ exam }: { exam: Exam }) {
       background: colors.laboratorioLight,
     },
     cardiologia: {
-      label: 'CARDIOLOGÍA',
+      label: tr('CARDIOLOGÍA', 'CARDIOLOGIA', 'CARDIOLOGY'),
       icon: 'heart' as const,
       color: colors.cardiologia,
       background: colors.cardiologiaLight,
     },
     radiologia: {
-      label: 'RADIOLOGÍA',
+      label: tr('RADIOLOGÍA', 'RADIOLOGIA', 'RADIOLOGY'),
       icon: 'aperture' as const,
       color: colors.radiologia,
       background: colors.radiologiaLight,
@@ -182,7 +185,7 @@ function ExamCard({ exam }: { exam: Exam }) {
         <View style={styles.categoryCopy}>
           <Text style={[styles.category, { color: config.color }]}>{config.label}</Text>
           <Text style={[styles.date, { color: colors.mutedForeground }]}>
-            {new Date(exam.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+            {new Date(exam.date).toLocaleDateString(locale, { dateStyle: 'medium' })}
           </Text>
         </View>
         <Feather color={colors.mutedForeground} name="chevron-right" size={18} />
@@ -193,7 +196,7 @@ function ExamCard({ exam }: { exam: Exam }) {
       <View style={styles.meta}>
         <Feather color={colors.mutedForeground} name="map-pin" size={13} />
         <Text numberOfLines={1} style={[styles.metaText, { color: colors.mutedForeground }]}>
-          Registro personal
+            {tr('Registro personal', 'Registro personale', 'Personal record')}
         </Text>
       </View>
       <View style={styles.cardFooter}>

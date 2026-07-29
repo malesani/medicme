@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import { useColors } from '@/hooks/use-colors';
+import { useLanguage } from '@/context/language-context';
 import { safeLogger } from '@/utils/safe-logger';
 import { addAttachment, addMeasurement, createExam } from '@/db';
 import {
@@ -22,14 +23,6 @@ import {
   storeDocument,
   type PendingDocument,
 } from '@/services/document-storage';
-
-const categories = [
-  { label: 'Laboratorio', icon: 'droplet' as const },
-  { label: 'Cardiología', icon: 'heart' as const },
-  { label: 'Radiología', icon: 'aperture' as const },
-  { label: 'Dental', icon: 'smile' as const },
-  { label: 'General', icon: 'clipboard' as const },
-];
 
 type PendingMeasurement = {
   name: string;
@@ -41,8 +34,16 @@ type PendingMeasurement = {
 
 export default function NewExamScreen() {
   const colors = useColors();
+  const { tr } = useLanguage();
+  const categories = [
+    { key: 'laboratorio', label: tr('Laboratorio', 'Laboratorio', 'Laboratory'), icon: 'droplet' as const },
+    { key: 'cardiologia', label: tr('Cardiología', 'Cardiologia', 'Cardiology'), icon: 'heart' as const },
+    { key: 'radiologia', label: tr('Radiología', 'Radiologia', 'Radiology'), icon: 'aperture' as const },
+    { key: 'dental', label: tr('Dental', 'Dentale', 'Dental'), icon: 'smile' as const },
+    { key: 'general', label: tr('General', 'Generale', 'General'), icon: 'clipboard' as const },
+  ];
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('Laboratorio');
+  const [category, setCategory] = useState('laboratorio');
   const [notes, setNotes] = useState('');
   const [documents, setDocuments] = useState<PendingDocument[]>([]);
   const [measurements, setMeasurements] = useState<PendingMeasurement[]>([]);
@@ -60,8 +61,8 @@ export default function NewExamScreen() {
   const pickDocuments = async (type: string | string[]) => {
     if (Platform.OS === 'web') {
       Alert.alert(
-        'Disponible en la app móvil',
-        'La carpeta privada de MedPocket se crea en Android e iOS.'
+        tr('Disponible en la app móvil', 'Disponibile nell’app mobile', 'Available in the mobile app'),
+        tr('La carpeta privada de MedPocket se crea en Android e iOS.', 'La cartella privata di MedPocket viene creata su Android e iOS.', 'MedPocket’s private folder is created on Android and iOS.')
       );
       return;
     }
@@ -85,7 +86,7 @@ export default function NewExamScreen() {
 
   const pickFromGallery = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('Disponible en la app móvil', 'La galería se integra en Android e iOS.');
+      Alert.alert(tr('Disponible en la app móvil', 'Disponibile nell’app mobile', 'Available in the mobile app'), tr('La galería se integra en Android e iOS.', 'La galleria è integrata su Android e iOS.', 'The gallery is integrated on Android and iOS.'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -107,12 +108,12 @@ export default function NewExamScreen() {
 
   const takePhoto = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('Disponible en la app móvil', 'La cámara se integra en Android e iOS.');
+      Alert.alert(tr('Disponible en la app móvil', 'Disponibile nell’app mobile', 'Available in the mobile app'), tr('La cámara se integra en Android e iOS.', 'La fotocamera è integrata su Android e iOS.', 'The camera is integrated on Android and iOS.'));
       return;
     }
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permiso necesario', 'Autoriza el acceso a la cámara para fotografiar el documento.');
+      Alert.alert(tr('Permiso necesario', 'Autorizzazione necessaria', 'Permission required'), tr('Autoriza el acceso a la cámara para fotografiar el documento.', 'Autorizza l’accesso alla fotocamera per fotografare il documento.', 'Allow camera access to photograph the document.'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -139,7 +140,7 @@ export default function NewExamScreen() {
       : null;
 
     if (!measurementName.trim() || !Number.isFinite(numericValue)) {
-      Alert.alert('Revisa el valor', 'Indica un nombre y un resultado numérico.');
+      Alert.alert(tr('Revisa el valor', 'Controlla il valore', 'Check the value'), tr('Indica un nombre y un resultado numérico.', 'Inserisci un nome e un risultato numerico.', 'Enter a name and a numeric result.'));
       return;
     }
     if (
@@ -147,7 +148,7 @@ export default function NewExamScreen() {
       (max !== null && !Number.isFinite(max)) ||
       (min !== null && max !== null && min >= max)
     ) {
-      Alert.alert('Rango no válido', 'El mínimo debe ser menor que el máximo.');
+      Alert.alert(tr('Rango no válido', 'Intervallo non valido', 'Invalid range'), tr('El mínimo debe ser menor que el máximo.', 'Il minimo deve essere inferiore al massimo.', 'The minimum must be lower than the maximum.'));
       return;
     }
 
@@ -170,7 +171,7 @@ export default function NewExamScreen() {
 
   const save = async () => {
     if (!name.trim()) {
-      Alert.alert('Falta el nombre', 'Escribe el nombre del examen.');
+      Alert.alert(tr('Falta el nombre', 'Nome mancante', 'Name required'), tr('Escribe el nombre del examen.', 'Inserisci il nome dell’esame.', 'Enter the exam name.'));
       return;
     }
     try {
@@ -179,7 +180,7 @@ export default function NewExamScreen() {
       const exam = await createExam({
         date: examDate,
         type: name.trim(),
-        notes: notes.trim() || category,
+        notes: notes.trim() || categories.find((item) => item.key === category)?.label || category,
       });
       for (const document of documents) {
         const stored = storeDocument(document);
@@ -210,7 +211,7 @@ export default function NewExamScreen() {
       router.back();
     } catch {
       safeLogger.error('Exam saving failed', { code: 'EXAM_SAVE_FAILED' });
-      Alert.alert('Error', 'No se pudo guardar el examen.');
+      Alert.alert(tr('Error', 'Errore', 'Error'), tr('No se pudo guardar el examen.', 'Impossibile salvare l’esame.', 'The exam could not be saved.'));
     } finally {
       setSaving(false);
     }
@@ -223,14 +224,14 @@ export default function NewExamScreen() {
           <Pressable onPress={() => router.back()} style={styles.headerAction}>
             <Feather color={colors.text} name="x" size={23} />
           </Pressable>
-          <Text style={[styles.title, { color: colors.text }]}>Nuevo examen</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{tr('Nuevo examen', 'Nuovo esame', 'New exam')}</Text>
           <View style={styles.headerAction} />
         </View>
 
-        <Text style={[styles.label, { color: colors.text }]}>Añadir documentos</Text>
+        <Text style={[styles.label, { color: colors.text }]}>{tr('Añadir documentos', 'Aggiungi documenti', 'Add documents')}</Text>
         <View style={styles.mediaRow}>
-          <MediaButton icon="camera" label="Cámara" onPress={takePhoto} />
-          <MediaButton icon="image" label="Galería" onPress={pickFromGallery} />
+          <MediaButton icon="camera" label={tr('Cámara', 'Fotocamera', 'Camera')} onPress={takePhoto} />
+          <MediaButton icon="image" label={tr('Galería', 'Galleria', 'Gallery')} onPress={pickFromGallery} />
           <MediaButton
             icon="file-text"
             label="PDF"
@@ -258,11 +259,11 @@ export default function NewExamScreen() {
                   <Text style={[styles.selectedFileMeta, { color: colors.mutedForeground }]}>
                     {document.size
                       ? `${Math.ceil(document.size / 1024)} KB`
-                      : 'Archivo seleccionado'}
+                      : tr('Archivo seleccionado', 'File selezionato', 'File selected')}
                   </Text>
                 </View>
                 <Pressable
-                  accessibilityLabel={`Quitar ${document.name}`}
+                  accessibilityLabel={`${tr('Quitar', 'Rimuovi', 'Remove')} ${document.name}`}
                   onPress={() =>
                     setDocuments((current) =>
                       current.filter((_, itemIndex) => itemIndex !== index)
@@ -276,11 +277,11 @@ export default function NewExamScreen() {
           </View>
         ) : null}
 
-        <Text style={[styles.label, { color: colors.text }]}>Valores del examen</Text>
+        <Text style={[styles.label, { color: colors.text }]}>{tr('Valores del examen', 'Valori dell’esame', 'Exam values')}</Text>
         <View style={[styles.measurementForm, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TextInput
             onChangeText={setMeasurementName}
-            placeholder="Nombre (ej. Glucosa)"
+            placeholder={tr('Nombre (ej. Glucosa)', 'Nome (es. Glucosio)', 'Name (e.g. Glucose)')}
             placeholderTextColor={colors.mutedForeground}
             style={[styles.input, { borderColor: colors.border, color: colors.text }]}
             value={measurementName}
@@ -289,7 +290,7 @@ export default function NewExamScreen() {
             <TextInput
               inputMode="decimal"
               onChangeText={setMeasurementValue}
-              placeholder="Resultado"
+              placeholder={tr('Resultado', 'Risultato', 'Result')}
               placeholderTextColor={colors.mutedForeground}
               style={[
                 styles.input,
@@ -300,7 +301,7 @@ export default function NewExamScreen() {
             />
             <TextInput
               onChangeText={setMeasurementUnit}
-              placeholder="Unidad"
+              placeholder={tr('Unidad', 'Unità', 'Unit')}
               placeholderTextColor={colors.mutedForeground}
               style={[
                 styles.input,
@@ -314,7 +315,7 @@ export default function NewExamScreen() {
             <TextInput
               inputMode="decimal"
               onChangeText={setMeasurementMin}
-              placeholder="Rango mín. (opcional)"
+              placeholder={tr('Rango mín. (opcional)', 'Intervallo min. (opzionale)', 'Min. range (optional)')}
               placeholderTextColor={colors.mutedForeground}
               style={[
                 styles.input,
@@ -326,7 +327,7 @@ export default function NewExamScreen() {
             <TextInput
               inputMode="decimal"
               onChangeText={setMeasurementMax}
-              placeholder="Rango máx. (opcional)"
+              placeholder={tr('Rango máx. (opcional)', 'Intervallo max. (opzionale)', 'Max. range (optional)')}
               placeholderTextColor={colors.mutedForeground}
               style={[
                 styles.input,
@@ -341,7 +342,7 @@ export default function NewExamScreen() {
             style={[styles.addMeasurement, { backgroundColor: colors.primaryLight }]}>
             <Feather color={colors.primary} name="plus" size={17} />
             <Text style={[styles.addMeasurementText, { color: colors.primary }]}>
-              Añadir valor al examen
+              {tr('Añadir valor al examen', 'Aggiungi valore all’esame', 'Add value to exam')}
             </Text>
           </Pressable>
         </View>
@@ -364,12 +365,12 @@ export default function NewExamScreen() {
                   <Text style={[styles.selectedFileMeta, { color: colors.mutedForeground }]}>
                     {measurement.value} {measurement.unit}
                     {measurement.rangeMin !== null || measurement.rangeMax !== null
-                      ? ` · Rango ${measurement.rangeMin ?? '—'}–${measurement.rangeMax ?? '—'}`
+                      ? ` · ${tr('Rango', 'Intervallo', 'Range')} ${measurement.rangeMin ?? '—'}–${measurement.rangeMax ?? '—'}`
                       : ''}
                   </Text>
                 </View>
                 <Pressable
-                  accessibilityLabel={`Quitar ${measurement.name}`}
+                  accessibilityLabel={`${tr('Quitar', 'Rimuovi', 'Remove')} ${measurement.name}`}
                   onPress={() =>
                     setMeasurements((current) =>
                       current.filter((_, itemIndex) => itemIndex !== index)
@@ -383,15 +384,15 @@ export default function NewExamScreen() {
           </View>
         ) : null}
 
-        <Text style={[styles.label, { color: colors.text }]}>Categoría</Text>
+        <Text style={[styles.label, { color: colors.text }]}>{tr('Categoría', 'Categoria', 'Category')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.categories}>
             {categories.map((item) => {
-              const active = category === item.label;
+              const active = category === item.key;
               return (
                 <Pressable
-                  key={item.label}
-                  onPress={() => setCategory(item.label)}
+                  key={item.key}
+                  onPress={() => setCategory(item.key)}
                   style={[
                     styles.category,
                     {
@@ -413,10 +414,10 @@ export default function NewExamScreen() {
           </View>
         </ScrollView>
 
-        <Text style={[styles.label, { color: colors.text }]}>Información</Text>
+        <Text style={[styles.label, { color: colors.text }]}>{tr('Información', 'Informazioni', 'Information')}</Text>
         <TextInput
           onChangeText={setName}
-          placeholder="Nombre del examen"
+          placeholder={tr('Nombre del examen', 'Nome dell’esame', 'Exam name')}
           placeholderTextColor={colors.mutedForeground}
           style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
           value={name}
@@ -424,7 +425,7 @@ export default function NewExamScreen() {
         <TextInput
           multiline
           onChangeText={setNotes}
-          placeholder="Centro médico, profesional y notas"
+          placeholder={tr('Centro médico, profesional y notas', 'Centro medico, professionista e note', 'Medical center, professional and notes')}
           placeholderTextColor={colors.mutedForeground}
           style={[
             styles.input,
@@ -437,7 +438,7 @@ export default function NewExamScreen() {
           disabled={saving}
           onPress={save}
           style={[styles.save, { backgroundColor: colors.primary }, saving && { opacity: 0.6 }]}>
-          <Text style={styles.saveText}>{saving ? 'Guardando…' : 'Guardar examen'}</Text>
+          <Text style={styles.saveText}>{saving ? tr('Guardando…', 'Salvataggio…', 'Saving…') : tr('Guardar examen', 'Salva esame', 'Save exam')}</Text>
         </Pressable>
       </ScrollView>
     </View>

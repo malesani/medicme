@@ -43,26 +43,31 @@ function requireFirebaseConfig() {
 }
 
 export async function analyzeHealthMeasurements(
-  measurements: Measurement[]
+  measurements: Measurement[],
+  language: 'en' | 'es' | 'it' = 'es'
 ): Promise<HealthAgentAnalysis> {
   return executePrivateAIRequest({
     payload: measurements,
     sanitize: sanitizeMedicalValuesForAI,
-    execute: executeSanitizedAnalysis,
+    execute: (payload) => executeSanitizedAnalysis(payload, language),
   });
 }
 
-async function executeSanitizedAnalysis(payload: unknown): Promise<HealthAgentAnalysis> {
+async function executeSanitizedAnalysis(
+  payload: unknown,
+  language: 'en' | 'es' | 'it'
+): Promise<HealthAgentAnalysis> {
   requireFirebaseConfig();
   const values = payload as SanitizedMedicalValue[];
 
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   const ai = getAI(app, { backend: new GoogleAIBackend() });
+  const responseLanguage = { es: 'español', it: 'italiano', en: 'inglés' }[language];
   const model = getGenerativeModel(ai, {
     model: 'gemini-3.6-flash',
     systemInstruction: `
 Eres Medi, un asistente educativo de bienestar. Analiza exclusivamente los resultados médicos
-proporcionados. Explica en español sencillo qué significa cada indicador y ofrece hábitos generales
+proporcionados. Responde siempre en ${responseLanguage}. Explica de forma sencilla qué significa cada indicador y ofrece hábitos generales
 prudentes. Usa el rango entregado por el usuario; no inventes rangos. No diagnostiques enfermedades,
 no prescribas medicamentos, no recomiendes suspender tratamientos y no presentes una posible causa
 como certeza. Si un dato no puede interpretarse sin más contexto, dilo claramente. Recomienda

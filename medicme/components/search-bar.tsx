@@ -2,17 +2,20 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { useColors } from '@/hooks/use-colors';
+import { useLanguage } from '@/context/language-context';
 
 export function SearchBar({
   value,
   onChangeText,
-  placeholder = 'Buscar…',
+  placeholder,
 }: {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
 }) {
   const colors = useColors();
+  const { tr } = useLanguage();
+  const resolvedPlaceholder = placeholder ?? tr('Buscar…', 'Cerca…', 'Search…');
 
   return (
     <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -20,14 +23,14 @@ export function SearchBar({
       <TextInput
         clearButtonMode="while-editing"
         onChangeText={onChangeText}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         placeholderTextColor={colors.mutedForeground}
         returnKeyType="search"
         style={[styles.input, { color: colors.text }]}
         value={value}
       />
       {value ? (
-        <Pressable accessibilityLabel="Limpiar búsqueda" onPress={() => onChangeText('')}>
+        <Pressable accessibilityLabel={tr('Limpiar búsqueda', 'Cancella ricerca', 'Clear search')} onPress={() => onChangeText('')}>
           <Feather color={colors.mutedForeground} name="x-circle" size={18} />
         </Pressable>
       ) : null}
